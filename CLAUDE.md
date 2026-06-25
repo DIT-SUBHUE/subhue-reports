@@ -1,136 +1,265 @@
-# subhue-reports — guia de desenvolvimento com IA
+# subhue-reports — guia para desenvolvimento com IA
+
+## Objetivo
+
+Este projeto deve ser simples de navegar, testar e modificar por humanos e agentes de IA.
+
+Prioridades:
+
+1. Código pequeno e explícito.
+2. Estrutura previsível.
+3. Testes rápidos e úteis.
+4. Pouca mágica.
+5. Nomes fáceis de buscar com `rg`.
 
 ## Stack
 
-- Python 3.12+
-- pytest + fixtures para testes
-- ruff para lint e formatação
-- pyproject.toml como fonte única de config
-- just para atalhos de operação
+* Python 3.12+
+* `pytest`
+* `ruff`
+* `pyproject.toml`
+* `just`
 
-## Estrutura de pacote
+## Estrutura
 
-Src layout: pacote em `src/subhue_reports/`. Nunca colocar código de aplicação na raiz.
-Cada submódulo tem `__init__.py` vazio. Imports absolutos sempre: `from subhue_reports.registry.loader import build_registry`.
+Usar `src layout`.
 
-pytest lê `pythonpath = ["src"]` do `pyproject.toml`. justfile define `export PYTHONPATH := "src"`.
-Para instalar em modo editável: `pip install -e .` (usa `[tool.setuptools.packages.find] where = ["src"]`).
+```text
+src/subhue_reports/
+tests/
+├── unit/
+├── integration/
+├── fixtures/
+└── conftest.py
+```
+
+Regras:
+
+* Código de aplicação nunca fica na raiz.
+* Imports sempre absolutos.
+
+```python
+from subhue_reports.registry.loader import build_registry
+```
+
+* `pytest` usa `pythonpath = ["src"]`.
+* `justfile` exporta `PYTHONPATH := "src"`.
+* Instalação local:
+
+```bash
+pip install -e .
+```
+
+## Estilo de código
+
+* Funções pequenas: idealmente 4 a 20 linhas.
+* Arquivos abaixo de 500 linhas.
+* Uma função faz uma coisa.
+* Um módulo tem uma responsabilidade clara.
+* Prefira retornos antecipados a `if` aninhado.
+* Máximo de 2 níveis de indentação.
+* Evite duplicação; extraia lógica compartilhada.
+
+### Nomes
+
+Evite nomes genéricos:
+
+```text
+data, result, handler, manager, service, process
+```
+
+Prefira nomes específicos do domínio:
+
+```text
+manifest_model_nodes
+source_freshness_warning
+registry_build_result
+```
+
+Regra prática: o nome deve ser fácil de encontrar com `rg` sem retornar muitos falsos positivos.
+
+### Tipos
+
+* Toda função nova deve ter type hints.
+* Evite `Any`.
+* Evite `dict` genérico quando o formato é conhecido.
+* Prefira `TypedDict`, `dataclass`, `Enum` ou `Protocol`.
+
+## Erros
+
+Mensagens de erro devem incluir:
+
+* valor recebido;
+* formato esperado;
+* contexto.
+
+```python
+raise ValueError(
+    f"Manifest inválido: metadata ausente. "
+    f"Recebido: {manifest.keys()}. Esperado: chave 'metadata'."
+)
+```
+
+## Comentários
+
+* Não remova comentários existentes sem entender o motivo.
+* Comentários devem explicar o **porquê**, não o óbvio.
+* Funções públicas devem ter docstring curta com intenção e exemplo quando útil.
+
+Bom:
+
+```python
+# Manifest antigo pode vir sem group_map; manter fallback por compatibilidade.
+```
+
+Ruim:
+
+```python
+# incrementa contador
+count += 1
+```
+
+## Dependências
+
+* Injete dependências por parâmetro ou construtor.
+* Evite variáveis globais escondendo dependências.
+* I/O externo deve ficar isolado.
+* Bibliotecas de terceiros devem ser acessadas por interfaces finas do projeto quando forem centrais para a lógica.
 
 ## Testes
 
-### Organização
+Comandos:
 
-```
-tests/
-├── unit/           lógica pura, sem I/O externo
-├── integration/    requerem banco/API/disco — marcados @pytest.mark.integration
-├── fixtures/       dados estáticos conhecidos
-└── conftest.py     fixtures compartilhadas
+```bash
+just test
+just test-integration
 ```
 
-### Unit tests
+Organização:
 
-Para lógica pura: normalização, cálculo, montagem de dict, geração de paths, validação.
-Nunca mockar o que não é necessário. Se a função tem dependência externa, mova a lógica pura para uma função separada e teste essa.
+* `tests/unit/`: lógica pura, sem I/O externo.
+* `tests/integration/`: banco, API, disco ou serviços externos.
+* `tests/fixtures/`: arquivos estáticos.
+* `conftest.py`: fixtures compartilhadas.
+
+### Regras
+
+* Toda função nova relevante deve ter teste.
+* Todo bug corrigido deve ter teste de regressão.
+* Teste comportamento público, não implementação interna.
+* Não mockar o que não precisa.
+* Para I/O externo, prefira fake classes nomeadas.
+* Fixtures devem representar casos reais, incluindo `None`, string vazia, campos ausentes e versões antigas.
+
+Bom:
 
 ```python
-# bom: testa comportamento, não implementação
-def test_badge_class_hi():
+def test_badge_class_retorna_hi_quando_score_alto():
     assert badge_class(95) == "badge hi"
+```
 
-# ruim: testa detalhe de implementação
-def test_badge_class_calls_float_conversion():
+Ruim:
+
+```python
+def test_badge_class_chama_float_conversion():
     ...
 ```
 
-### Fixtures
+### Nomes de testes
 
-Fixtures são contexto confiável. Defina em `conftest.py` os dicts/objetos que múltiplos testes usam.
-Fixtures de arquivo (CSV, YAML, HTML) ficam em `tests/fixtures/` e são carregadas via `@pytest.fixture` com `Path`.
-
-```python
-@pytest.fixture
-def sample_manifest():
-    return {"nodes": {...}, "metadata": {...}}
-
-@pytest.fixture
-def registry(sample_manifest):
-    return build_registry(sample_manifest)
+```text
+test_<funcao>_<cenario>
+test_<funcao>_quando_<condicao>
 ```
 
-### Integration tests
+Exemplos:
 
-Marcados com `@pytest.mark.integration`. Não rodam no CI padrão.
-Rodar localmente com `pytest -m integration` ou `just test-integration`.
-
-```python
-@pytest.mark.integration
-def test_db_connection():
-    ...
-```
-
-Requerem `.env` configurado. Nunca usam dados de produção diretamente — usam tabela/schema de teste quando possível.
-
-## Nomenclatura de testes
-
-`test_<função>_<cenário>` ou `test_<função>_quando_<condição>`.
-
-```
+```text
 test_build_registry_ignora_nodes_nao_model
 test_check_sources_retorna_warning_versao_desatualizada
 test_badge_class_retorna_na_quando_none
 ```
 
-## Linting e formatação
+### Integração
 
-Ruff como único linter/formatter. Configurado em `pyproject.toml`.
+* Marcar com `@pytest.mark.integration`.
+* Não rodar no CI padrão.
+* Usar `.env.test`.
+* Nunca depender diretamente de produção.
+
+## Ruff
+
+Ruff é o único linter e formatter.
 
 ```bash
-ruff check .       # lint
-ruff format .      # format
-ruff check --fix . # auto-fix
+ruff check .
+ruff format .
+ruff check --fix .
 ```
 
-Regras ativas: E (pycodestyle), F (pyflakes), I (imports), UP (pyupgrade), B (bugbear), SIM (simplificações).
+Regras principais:
 
-## Práticas específicas para desenvolvimento com IA
+* `E`
+* `F`
+* `I`
+* `UP`
+* `B`
+* `SIM`
 
-### Não gerar dados falsos que mascaram comportamento real
+Não discutir estilo fora do formatter.
 
-Ruim: fixture com dados inventados que nunca falham.
-Bom: fixture derivada de schema real (`reference/`) com casos edge reais (None, string vazia, valores limítrofes).
+## Variáveis de ambiente
 
-### Testar os contratos, não os internos
+* Sempre via `.env`.
+* Nunca hardcodar credenciais.
+* `.env.example` deve documentar as variáveis.
+* Integração usa `.env.test`.
 
-IA tende a gerar testes que verificam detalhes de implementação. Testes devem verificar o contrato público da função (input → output), não como ela calcula internamente.
+## Logging
 
-### Fixtures como documentação
-
-Uma fixture bem nomeada explica a estrutura esperada. `sample_manifest_com_dois_models` é melhor que um dict inline de 30 linhas.
-
-### Um assert por teste (quando possível)
-
-Facilita diagnóstico. IA frequentemente empilha asserts — quebre em funções separadas quando cenários são distintos.
-
-### Não testar o Python, testar o negócio
-
-Ruim: `assert isinstance(result, dict)`.
-Bom: `assert result["silver_timed.fat_censo_leito_ativo"]["version"] == "1.0.2"`.
+* Logs técnicos devem ser estruturados, preferencialmente JSON.
+* Saída de CLI para usuário deve ser texto simples.
+* Nunca logar segredos.
 
 ## Comandos úteis
 
 ```bash
-just test               # unit tests
-just test-integration   # integration tests
-just lint               # ruff check
-just format             # ruff format
-just manifest-update    # atualiza manifest local da API
-just manifest-status    # verifica se manifest está atualizado
+just test
+just test-integration
+just lint
+just format
+just manifest-update
+just manifest-status
 ```
 
-## Variáveis de ambiente
+## Regras para agentes de IA
 
-Sempre via `.env` (carregado pelo justfile). Nunca hardcodar credenciais.
-Arquivo `.env.example` é a documentação das variáveis — mantê-lo atualizado.
+Antes de finalizar qualquer mudança:
 
-Para testes de integração, criar `.env.test` com credenciais de ambiente de desenvolvimento.
+1. Preservar comentários úteis.
+2. Não misturar idiomas.
+3. Não criar dados falsos que escondem comportamento real.
+4. Não adicionar abstração genérica sem necessidade.
+5. Não alterar contrato público sem atualizar testes.
+6. Rodar `just test` quando houver mudança de lógica.
+7. Rodar `just lint` e `just format`.
+8. Preferir mudanças pequenas e verificáveis.
+
+## Anti-padrões
+
+Evite:
+
+* funções longas;
+* arquivos gigantes;
+* nomes genéricos;
+* fixtures enormes inline;
+* testes de detalhes internos;
+* mocks desnecessários;
+* dependências globais escondidas;
+* credenciais hardcoded;
+* comentários óbvios;
+* duplicação de regra de negócio.
+
+## Regra final
+
+Código bom neste projeto é código que dá para encontrar com `rg`, entender rápido, modificar com baixo risco e validar com um comando.
