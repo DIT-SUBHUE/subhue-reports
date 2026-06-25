@@ -1,0 +1,15 @@
+# renderer
+plotly>=5.0
+
+# cache e query
+duckdb>=0.10
+pyarrow>=14.0
+
+# registry / sync / http
+requests>=2.31
+
+# banco (extração)
+psycopg2-binary>=2.9
+
+# utilitários
+pyyaml>=6.0

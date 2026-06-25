@@ -1,0 +1,43 @@
+[project]
+name = "subhue-reports"
+version = "0.1.0"
+description = "Gerador de relatórios Subhue"
+requires-python = ">=3.12"
+dependencies = [
+    "plotly>=5.0",
+    "duckdb>=0.10",
+    "pyarrow>=14.0",
+    "requests>=2.31",
+    "psycopg2-binary>=2.9",
+    "pyyaml>=6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "integration: tests that require external services (db, api, disk)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplificações
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

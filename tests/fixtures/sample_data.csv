@@ -1,0 +1,6 @@
+estabelecimento_gid,nome_estabelecimento,tipo,periodo,total_atendimentos,total_altas,taxa_alta_pct
+1001,Hospital Municipal São Francisco,hospital,2026-06,4523,912,20.2
+1002,UPA João XXIII,upa,2026-06,10835,87,0.8
+1003,CER Barra da Tijuca,cer,2026-06,2341,443,18.9
+1004,Hospital Estadual Getúlio Vargas,hospital,2026-06,3812,689,18.1
+1005,UPA Realengo,upa,2026-06,8921,64,0.7

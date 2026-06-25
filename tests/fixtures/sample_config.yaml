@@ -1,0 +1,16 @@
+manifest:
+  base_url: "https://diid.exemplo.gov.br"
+  tag: "airflow_astro"
+  local_path: "data/manifest.json"
+
+cache:
+  dir: "data/cache"
+  max_age_days: 7
+
+reports:
+  dir: "data/reports"
+  default_format: "html"
+
+sync:
+  base_url: "https://diid.exemplo.gov.br"
+  dry_run: false
