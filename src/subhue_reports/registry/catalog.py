@@ -16,7 +16,7 @@ import json
 import textwrap
 from typing import TypedDict
 
-from subhue_reports.registry.loader import RegistryEntry
+from subhue_reports.registry.loader import RegistryEntry, SourceEntry
 
 
 class ColumnSummary(TypedDict):
@@ -289,8 +289,85 @@ def _print_filtered_catalog(
     if getattr(args, "as_json", False):
         print(json.dumps(matching_models, ensure_ascii=False, indent=2))
         return
+    if not matching_models:
+        _print_no_results_hint(registry, args)
+        return
     filtered_registry = {m["name"]: registry[m["name"]] for m in matching_models}
     print(to_context(filtered_registry, include_columns=include_columns))
+
+
+# ── Sources ─────────────────────────────────────────────────────────────────
+
+
+def source_catalog(
+    source_registry: dict[str, SourceEntry],
+    source_name: str | None = None,
+    schema: str | None = None,
+    name_contains: str | None = None,
+) -> list[SourceEntry]:
+    """Lista compacta de fontes raw. Filtra por source_name, schema ou substring do nome."""
+    return [
+        entry
+        for key, entry in sorted(source_registry.items())
+        if (source_name is None or entry.get("source_name") == source_name)
+        and (schema is None or entry.get("schema") == schema)
+        and (name_contains is None or name_contains.lower() in entry.get("name", "").lower())
+    ]
+
+
+def to_sources_context(
+    source_registry: dict[str, SourceEntry],
+    source_name: str | None = None,
+    schema: str | None = None,
+    name_contains: str | None = None,
+) -> str:
+    """Bloco de texto compacto de fontes raw para injeção em prompt LLM.
+
+    Agrupado por source_name. Cada tabela mostra schema e descrição.
+    Claramente distinto de to_context() (modelos dbt).
+    """
+    entries = source_catalog(source_registry, source_name, schema, name_contains)
+    if not entries:
+        available = sorted({e.get("source_name", "") for e in source_registry.values()})
+        return f"Nenhuma fonte encontrada. source_names disponíveis: {', '.join(available)}"
+
+    groups: dict[str, list[SourceEntry]] = {}
+    for entry in entries:
+        groups.setdefault(entry.get("source_name", "?"), []).append(entry)
+
+    lines = [
+        f"MANIFEST SOURCES ({len(entries)} tabelas | {len(groups)} grupos)",
+        "",
+    ]
+    for group_name, group_entries in sorted(groups.items()):
+        source_desc = group_entries[0].get("source_description", "")
+        schema_name = group_entries[0].get("schema", "")
+        lines.append(f"[{group_name}] schema={schema_name} ({len(group_entries)} tabelas)")
+        if source_desc:
+            lines.append(f"  {_truncate(source_desc, 100)}")
+        for entry in sorted(group_entries, key=lambda e: e.get("name", "")):
+            col_count = len(entry.get("_columns", {}))
+            desc = _truncate(entry.get("description", ""), 80)
+            col_info = f" ({col_count} cols)" if col_count else ""
+            if desc:
+                lines.append(f"  - {entry['name']}{col_info}: {desc}")
+            else:
+                lines.append(f"  - {entry['name']}{col_info}")
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
+def _print_no_results_hint(registry: dict[str, RegistryEntry], args: object) -> None:
+    schemas = sorted({m.get("_schema", "") for m in registry.values()})
+    layers = sorted({m.get("layer", "") for m in registry.values()})
+    schema_filter = getattr(args, "schema", None)
+    layer_filter = getattr(args, "layer", None)
+    print("Nenhum model encontrado.")
+    if schema_filter:
+        print(f"  schema '{schema_filter}' não existe. Disponíveis: {', '.join(schemas)}")
+    if layer_filter:
+        print(f"  layer '{layer_filter}' não existe. Disponíveis: {', '.join(layers)}")
 
 
 if __name__ == "__main__":

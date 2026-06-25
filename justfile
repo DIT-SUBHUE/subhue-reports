@@ -37,6 +37,73 @@ manifest-versions:
 manifest-check report:
     python -m subhue_reports.registry.checker {{report}}
 
+# ── Catalog ────────────────────────────────────────────────────────────────────
+
+# Lista todos os models do manifest em formato LLM-friendly
+manifest-catalog:
+    python -m subhue_reports.registry.catalog --no-columns
+
+# Lista models com colunas (contexto completo para LLM)
+manifest-catalog-full:
+    python -m subhue_reports.registry.catalog
+
+# Detalhe de um model específico
+manifest-catalog-model model:
+    python -m subhue_reports.registry.catalog {{model}}
+
+# Filtra models por layer (silver, gold)
+manifest-catalog-layer layer:
+    python -m subhue_reports.registry.catalog --layer {{layer}} --no-columns
+
+# Filtra models por schema (silver_timed, gold_timed, raw_sarah)
+manifest-catalog-schema schema:
+    python -m subhue_reports.registry.catalog --schema {{schema}} --no-columns
+
+# Busca models por substring do nome
+manifest-catalog-search name:
+    python -m subhue_reports.registry.catalog --name {{name}} --no-columns
+
+# Lista schemas e layers disponíveis no manifest
+manifest-catalog-info:
+    #!/usr/bin/env python3
+    from subhue_reports.registry.loader import build_registry, build_source_registry, load_manifest
+    manifest = load_manifest()
+    registry = build_registry(manifest)
+    sources = build_source_registry(manifest)
+    schemas = sorted({m.get("_schema", "") for m in registry.values()})
+    layers = sorted({m.get("layer", "") for m in registry.values()})
+    source_names = sorted({s.get("source_name", "") for s in sources.values()})
+    source_schemas = sorted({s.get("schema", "") for s in sources.values()})
+    print(f"=== models ({len(registry)}) ===")
+    print(f"schemas ({len(schemas)}): {', '.join(schemas)}")
+    print(f"layers  ({len(layers)}): {', '.join(layers)}")
+    print(f"\n=== sources ({len(sources)} tabelas) ===")
+    print(f"source_names ({len(source_names)}): {', '.join(source_names)}")
+    print(f"schemas      ({len(source_schemas)}): {', '.join(source_schemas)}")
+
+# ── Sources ────────────────────────────────────────────────────────────────────
+
+# Lista todas as fontes raw agrupadas por source_name
+manifest-sources:
+    #!/usr/bin/env python3
+    from subhue_reports.registry.loader import build_source_registry, load_manifest
+    from subhue_reports.registry.catalog import to_sources_context
+    print(to_sources_context(build_source_registry(load_manifest())))
+
+# Lista fontes de um source_name específico (ex: raw_timed_dtw)
+manifest-sources-group group:
+    #!/usr/bin/env python3
+    from subhue_reports.registry.loader import build_source_registry, load_manifest
+    from subhue_reports.registry.catalog import to_sources_context
+    print(to_sources_context(build_source_registry(load_manifest()), source_name="{{group}}"))
+
+# Busca fontes por substring do nome da tabela
+manifest-sources-search name:
+    #!/usr/bin/env python3
+    from subhue_reports.registry.loader import build_source_registry, load_manifest
+    from subhue_reports.registry.catalog import to_sources_context
+    print(to_sources_context(build_source_registry(load_manifest()), name_contains="{{name}}"))
+
 # ── Cache ──────────────────────────────────────────────────────────────────────
 
 # Lista parquets em cache com status (source, version, data extração)

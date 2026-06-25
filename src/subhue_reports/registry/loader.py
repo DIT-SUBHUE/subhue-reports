@@ -51,6 +51,17 @@ def load_manifest(path: str | None = None, url: str | None = None) -> dict:
     return _unwrap(json.loads(Path(manifest_source).read_text()))
 
 
+class SourceEntry(TypedDict, total=False):
+    # Campos sempre presentes após build_source_registry
+    source_name: str      # grupo lógico (ex: raw_timed_dtw)
+    name: str             # nome da tabela
+    schema: str           # schema real no banco
+    description: str
+    source_description: str
+    _columns: dict[str, dict]
+    _relation_name: str   # nome totalmente qualificado no banco
+
+
 def build_registry(manifest: dict) -> dict[str, RegistryEntry]:
     """Extrai {model_name: meta} de todos os model nodes."""
     return {
@@ -64,6 +75,23 @@ def build_registry(manifest: dict) -> dict[str, RegistryEntry]:
         }
         for node in manifest.get("nodes", {}).values()
         if node.get("resource_type") == "model"
+    }
+
+
+def build_source_registry(manifest: dict) -> dict[str, SourceEntry]:
+    """Extrai {source_name.table_name: meta} de todos os source nodes."""
+    return {
+        f"{source['source_name']}.{source['name']}": {
+            "source_name": source["source_name"],
+            "name": source["name"],
+            "schema": source.get("schema", ""),
+            "description": source.get("description", ""),
+            "source_description": source.get("source_description", ""),
+            "_columns": source.get("columns", {}),
+            "_relation_name": source.get("relation_name", ""),
+        }
+        for source in manifest.get("sources", {}).values()
+        if source.get("resource_type") == "source"
     }
 
 
