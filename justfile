@@ -144,10 +144,21 @@ duckdb-shell:
 
 # ── Relatórios ────────────────────────────────────────────────────────────────
 
-# Gera HTML a partir de JSON já construído
-report-render json:
-    python -m subhue_reports.renderer.relatorio {{json}} \
-        -o data/reports/$(basename {{json}} .json).html
+# Gera HTML a partir de JSON ou diretório de seções
+report-render src:
+    python -m subhue_reports.renderer.relatorio {{src}}
+
+# Lista seções de um diretório de relatório (idx, tipo, arquivo)
+report-show dir:
+    #!/usr/bin/env python3
+    from pathlib import Path
+    from subhue_reports.renderer.sections import list_sections
+    secs = list_sections(Path("{{dir}}"))
+    if not secs:
+        print("nenhuma seção encontrada")
+    else:
+        for idx, tipo, fname in secs:
+            print(f"  {idx:02d}  {tipo:<20}  {fname}")
 
 # Valida JSON de relatório contra schema e fontes
 report-validate json:
@@ -155,10 +166,9 @@ report-validate json:
 
 # ── Documentações ─────────────────────────────────────────────────────────────
 
-# Gera HTML de documentação a partir de JSON
-doc-render json:
-    python -m subhue_reports.renderer.documentacao {{json}} \
-        -o data/reports/$(basename {{json}} .json).html
+# Gera HTML de documentação a partir de JSON ou diretório de seções
+doc-render src:
+    python -m subhue_reports.renderer.documentacao {{src}}
 
 # ── Sync ──────────────────────────────────────────────────────────────────────
 

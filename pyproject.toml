@@ -38,6 +38,11 @@ select = [
 ]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+# CSS strings embutidos nos renderers não podem ser quebrados por linha
+"src/subhue_reports/renderer/relatorio.py" = ["E501"]
+"src/subhue_reports/renderer/documentacao.py" = ["E501"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
