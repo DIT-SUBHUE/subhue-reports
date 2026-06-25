@@ -1,9 +1,7 @@
 """Tests for subhue_reports.registry.catalog."""
 
-import pytest
 
 from subhue_reports.registry.catalog import catalog, detail, search, to_context
-
 
 # ── catalog ──────────────────────────────────────────────────────────────────
 
@@ -16,7 +14,10 @@ def test_catalog_retorna_apenas_models(registry):
 
 def test_catalog_campos_obrigatorios(registry):
     result = catalog(registry)
-    required = {"name", "table", "schema", "layer", "status", "version", "grain", "description", "primary_key"}
+    required = {
+        "name", "table", "schema", "layer", "status",
+        "version", "grain", "description", "primary_key",
+    }
     for model in result:
         assert required <= model.keys()
 

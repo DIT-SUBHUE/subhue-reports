@@ -2,7 +2,6 @@
 
 import json
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -29,20 +28,20 @@ class TestLoadManifest:
         assert "nodes" in result
 
     def test_levanta_erro_sem_source_configurado(self, tmp_path):
-        import subhue_reports.registry.loader as loader_module
+        import subhue_reports.registry.loader as loader_mod
         from subhue_reports.registry.loader import load_manifest
 
-        env_limpo = {
+        env_sem_manifest = {
             k: v for k, v in os.environ.items()
             if k not in ("DBT_MANIFEST_PATH", "DBT_MANIFEST_URL")
         }
-        path_inexistente = tmp_path / "nao_existe.json"
-        with patch.dict(os.environ, env_limpo, clear=True):
-            with patch.object(loader_module, "_DEFAULT_MANIFEST_PATH", path_inexistente):
-                with patch("subhue_reports.registry.loader.Path") as mock_path_cls:
-                    mock_path_cls.return_value.exists.return_value = False
-                    with pytest.raises(RuntimeError, match="DBT_MANIFEST_PATH"):
-                        load_manifest()
+        with (
+            patch.dict(os.environ, env_sem_manifest, clear=True),
+            patch.object(loader_mod, "_DEFAULT_MANIFEST_PATH", tmp_path / "nao_existe.json"),
+            patch.object(loader_mod, "_AIRFLOW_FALLBACK_PATH", tmp_path / "tambem_nao_existe.json"),
+            pytest.raises(RuntimeError, match="DBT_MANIFEST_PATH"),
+        ):
+            load_manifest()
 
     def test_path_arg_tem_precedencia_sobre_env(self, tmp_path, sample_manifest):
         from subhue_reports.registry.loader import load_manifest
@@ -65,9 +64,11 @@ class TestUpdaterAuth:
             k: v for k, v in os.environ.items()
             if k not in ("DBT_MANIFEST_API_USERNAME", "DBT_MANIFEST_API_PASSWORD")
         }
-        with patch.dict(os.environ, env_limpo, clear=True):
-            with pytest.raises(RuntimeError, match="DBT_MANIFEST_API_USERNAME"):
-                _get_token("https://api.exemplo.gov.br")
+        with (
+            patch.dict(os.environ, env_limpo, clear=True),
+            pytest.raises(RuntimeError, match="DBT_MANIFEST_API_USERNAME"),
+        ):
+            _get_token("https://api.exemplo.gov.br")
 
     def test_get_token_retorna_token_da_api(self):
         from subhue_reports.registry.updater import _get_token
@@ -122,9 +123,11 @@ class TestUpdaterConfig:
         from subhue_reports.registry.updater import check_and_update
 
         env_limpo = {k: v for k, v in os.environ.items() if k != "DBT_MANIFEST_API_BASE_URL"}
-        with patch.dict(os.environ, env_limpo, clear=True):
-            with pytest.raises(RuntimeError, match="DBT_MANIFEST_API_BASE_URL"):
-                check_and_update()
+        with (
+            patch.dict(os.environ, env_limpo, clear=True),
+            pytest.raises(RuntimeError, match="DBT_MANIFEST_API_BASE_URL"),
+        ):
+            check_and_update()
 
     def test_check_and_update_skip_quando_atualizado(self, tmp_path):
         from subhue_reports.registry.updater import check_and_update
@@ -155,7 +158,10 @@ class TestUpdaterConfig:
 
         with (
             patch("subhue_reports.registry.updater.fetch_remote_meta", return_value=remote_meta),
-            patch("subhue_reports.registry.updater.fetch_manifest_content", return_value=sample_manifest),
+            patch(
+                "subhue_reports.registry.updater.fetch_manifest_content",
+                return_value=sample_manifest,
+            ),
             patch.dict(os.environ, {"DBT_MANIFEST_API_BASE_URL": "https://api.exemplo.gov.br"}),
         ):
             updated = check_and_update(meta_path=meta_file, manifest_path=manifest_path)
@@ -173,7 +179,10 @@ class TestUpdaterConfig:
 
         with (
             patch("subhue_reports.registry.updater.fetch_remote_meta", return_value=remote_meta),
-            patch("subhue_reports.registry.updater.fetch_manifest_content", return_value=sample_manifest),
+            patch(
+                "subhue_reports.registry.updater.fetch_manifest_content",
+                return_value=sample_manifest,
+            ),
             patch.dict(os.environ, {"DBT_MANIFEST_API_BASE_URL": "https://api.exemplo.gov.br"}),
         ):
             check_and_update(meta_path=meta_file, manifest_path=tmp_path / "m.json")
@@ -193,7 +202,10 @@ class TestUpdaterConfig:
 
         with (
             patch("subhue_reports.registry.updater.fetch_remote_meta", return_value=remote_meta),
-            patch("subhue_reports.registry.updater.fetch_manifest_content", return_value=sample_manifest),
+            patch(
+                "subhue_reports.registry.updater.fetch_manifest_content",
+                return_value=sample_manifest,
+            ),
             patch.dict(os.environ, {"DBT_MANIFEST_API_BASE_URL": "https://api.exemplo.gov.br"}),
         ):
             updated = check_and_update(
@@ -213,7 +225,10 @@ class TestUpdaterConfig:
 
         with (
             patch("subhue_reports.registry.updater.fetch_remote_meta", return_value=remote_meta),
-            patch("subhue_reports.registry.updater.fetch_manifest_content", return_value=sample_manifest),
+            patch(
+                "subhue_reports.registry.updater.fetch_manifest_content",
+                return_value=sample_manifest,
+            ),
             patch.dict(os.environ, {"DBT_MANIFEST_API_BASE_URL": "https://api.exemplo.gov.br"}),
         ):
             check_and_update(manifest_path=manifest_path, meta_path=meta_path)

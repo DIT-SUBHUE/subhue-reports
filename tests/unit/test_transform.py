@@ -1,6 +1,5 @@
 """Testa transformações puras: build_registry, check_sources, cálculos de path/versão."""
 
-import pytest
 
 
 class TestBuildRegistry:

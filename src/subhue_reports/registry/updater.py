@@ -17,12 +17,15 @@ Uso direto:
 
 import argparse
 import json
+import logging
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_TAG = "airflow_astro"
 _MANIFEST_DIR = Path("data/manifest")
@@ -36,8 +39,10 @@ def _get_token(base_url: str) -> str:
     password = os.getenv("DBT_MANIFEST_API_PASSWORD", "")
     if not username or not password:
         raise RuntimeError(
-            "Configure DBT_MANIFEST_API_USERNAME e DBT_MANIFEST_API_PASSWORD no .env"
+            "Credenciais ausentes. "
+            "Configure DBT_MANIFEST_API_USERNAME e DBT_MANIFEST_API_PASSWORD no .env."
         )
+    logger.debug("autenticando em %s/autenticacao/token/", base_url)
     r = requests.post(
         f"{base_url}/autenticacao/token/",
         json={"username": username, "password": password},
@@ -47,8 +52,7 @@ def _get_token(base_url: str) -> str:
     return r.json()["token"]
 
 
-def _auth_headers(base_url: str) -> dict:
-    """Retorna header Authorization com token obtido da API."""
+def _auth_headers(base_url: str) -> dict[str, str]:
     token = _get_token(base_url)
     return {"Authorization": f"Token {token}"}
 
@@ -62,33 +66,22 @@ def fetch_remote_meta(base_url: str, tag: str) -> dict:
         timeout=30,
     )
     r.raise_for_status()
-    data = r.json()
-    if isinstance(data, list):
-        hits = [d for d in data if d.get("tag") == tag]
-        if not hits:
-            raise ValueError(f"tag '{tag}' não encontrada na API")
-        return hits[0]
-    if isinstance(data, dict) and "results" in data:
-        hits = [d for d in data["results"] if d.get("tag") == tag]
-        if not hits:
-            raise ValueError(f"tag '{tag}' não encontrada na API")
-        return hits[0]
-    return data
+    return _extract_manifest_meta(r.json(), tag)
 
 
 def fetch_manifest_content(base_url: str, tag: str) -> dict:
-    """GET /api/dbt-manifest/{tag}/content/ → manifest completo (campo manifest_content)."""
+    """GET /api/dbt-manifest/{tag}/content/ → manifest completo (sem envelope)."""
     r = requests.get(
         f"{base_url}/api/dbt-manifest/{tag}/content/",
         headers=_auth_headers(base_url),
         timeout=120,
     )
     r.raise_for_status()
-    data = r.json()
+    envelope = r.json()
     # API envolve o manifest em {"manifest_content": {...}}
-    if "manifest_content" in data:
-        return data["manifest_content"]
-    return data
+    if "manifest_content" in envelope:
+        return envelope["manifest_content"]
+    return envelope
 
 
 def load_local_meta(meta_path: Path = _META_PATH) -> dict | None:
@@ -114,47 +107,23 @@ def check_and_update(
 
     if not base_url:
         raise RuntimeError(
-            "Configure DBT_MANIFEST_API_BASE_URL no .env "
-            "(ex: https://diid.subhue.org)"
+            "DBT_MANIFEST_API_BASE_URL não configurado. "
+            "Defina no .env (ex: https://diid.subhue.org)."
         )
 
     remote_meta = fetch_remote_meta(base_url, tag)
-    remote_updated = remote_meta.get("updated_at", "")
-
     local_meta = load_local_meta(meta_path)
-    local_updated = (local_meta or {}).get("updated_at", "")
 
-    if not force and local_updated and local_updated >= remote_updated:
-        print(
-            f"manifest já atualizado  "
-            f"local={local_updated[:19]}  remoto={remote_updated[:19]}"
+    if not force and _is_manifest_current(local_meta, remote_meta):
+        local_updated = (local_meta or {}).get("updated_at", "")
+        remote_updated = remote_meta.get("updated_at", "")
+        logger.info(
+            "manifest já atualizado local=%s remoto=%s",
+            local_updated[:19], remote_updated[:19],
         )
         return False
 
-    action = "forçando atualização" if force and local_updated else "nova versão disponível"
-    print(f"{action}  remoto={remote_updated[:19]}")
-    print("baixando manifest...")
-
-    manifest = fetch_manifest_content(base_url, tag)
-
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
-
-    meta_path.write_text(json.dumps(
-        {
-            **remote_meta,
-            "local_path": str(manifest_path),
-            "fetched_at": datetime.now().astimezone().isoformat(),
-        },
-        ensure_ascii=False,
-        indent=2,
-    ))
-
-    model_count = sum(
-        1 for v in manifest.get("nodes", {}).values()
-        if v.get("resource_type") == "model"
-    )
-    print(f"manifest salvo  path={manifest_path}  models={model_count}")
+    _download_and_persist(base_url, tag, manifest_path, meta_path, remote_meta)
     return True
 
 
@@ -180,10 +149,67 @@ def print_status(base_url: str, tag: str) -> None:
         print("status:          desatualizado — execute 'just manifest-update'")
 
 
-if __name__ == "__main__":
-    p = argparse.ArgumentParser(
-        description="Verifica e atualiza manifest local a partir da API"
+def _extract_manifest_meta(api_response: dict | list, tag: str) -> dict:
+    """Extrai o objeto de metadados do manifest da resposta da API."""
+    if isinstance(api_response, dict) and "tag" in api_response:
+        return api_response
+
+    candidates: list[dict] = (
+        api_response if isinstance(api_response, list)
+        else api_response.get("results", [])
     )
+    matching = [item for item in candidates if item.get("tag") == tag]
+
+    if not matching:
+        available = [item.get("tag") for item in candidates]
+        raise ValueError(
+            f"tag '{tag}' não encontrada na resposta da API. "
+            f"Tags disponíveis: {available}"
+        )
+    return matching[0]
+
+
+def _is_manifest_current(local_meta: dict | None, remote_meta: dict) -> bool:
+    local_updated = (local_meta or {}).get("updated_at", "")
+    remote_updated = remote_meta.get("updated_at", "")
+    return bool(local_updated and local_updated >= remote_updated)
+
+
+def _download_and_persist(
+    base_url: str,
+    tag: str,
+    manifest_path: Path,
+    meta_path: Path,
+    remote_meta: dict,
+) -> None:
+    remote_updated = remote_meta.get("updated_at", "")
+    logger.info("baixando manifest tag=%s remoto=%s", tag, remote_updated[:19])
+
+    manifest = fetch_manifest_content(base_url, tag)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
+
+    model_count = _count_model_nodes(manifest)
+    fetched_at = datetime.now().astimezone().isoformat()
+    meta_path.write_text(json.dumps(
+        {**remote_meta, "local_path": str(manifest_path), "fetched_at": fetched_at},
+        ensure_ascii=False,
+        indent=2,
+    ))
+    logger.info("manifest salvo path=%s models=%d", manifest_path, model_count)
+
+
+def _count_model_nodes(manifest: dict) -> int:
+    return sum(
+        1 for v in manifest.get("nodes", {}).values()
+        if v.get("resource_type") == "model"
+    )
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    p = argparse.ArgumentParser(description="Verifica e atualiza manifest local a partir da API")
     p.add_argument("--force", action="store_true", help="baixa mesmo se já atualizado")
     p.add_argument("--check-only", action="store_true", help="verifica sem baixar")
     p.add_argument("--tag", default=None, help="tag do manifest (default: airflow_astro)")

@@ -4,7 +4,6 @@ Importa de reference/utils/ enquanto subhue_reports.renderer não está implemen
 Quando renderer for portado, trocar imports para subhue_reports.renderer.relatorio.
 """
 
-import pytest
 
 
 # ── Helpers de formatação ─────────────────────────────────────────────────────
@@ -261,7 +260,10 @@ class TestRenderTabela:
     def test_renderiza_cabecalho_das_colunas(self):
         sec = {
             "titulo": "Tabela",
-            "colunas": [{"label": "Unidade", "tipo": "texto"}, {"label": "Total", "tipo": "numero"}],
+            "colunas": [
+                {"label": "Unidade", "tipo": "texto"},
+                {"label": "Total", "tipo": "numero"},
+            ],
             "linhas": [],
         }
         result = self.render(sec)

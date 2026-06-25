@@ -7,8 +7,11 @@ Uso direto:
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def check_sources(report_json: dict, registry: dict) -> list[dict]:
@@ -21,10 +24,15 @@ def check_sources(report_json: dict, registry: dict) -> list[dict]:
         model_name = fonte.split(".")[-1]
         current = registry.get(model_name)
         if not current:
+            logger.warning("fonte não encontrada no registry: %s", fonte)
             warnings.append({"fonte": fonte, "issue": "model não encontrado no registry"})
             continue
         snapshotted = report_json["meta"].get("model_versions", {}).get(fonte)
         if snapshotted and snapshotted != current.get("version"):
+            logger.warning(
+                "fonte desatualizada: %s relatorio=%s atual=%s",
+                fonte, snapshotted, current.get("version"),
+            )
             warnings.append({
                 "fonte": fonte,
                 "issue": "versão desatualizada",
