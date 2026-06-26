@@ -15,7 +15,22 @@ Projetado para ser operado por agentes de IA (Claude Code, Codex, OpenCode) via 
 | `main`   | Desenvolvedores           | Sem restrições — pode editar código, commits, testes |
 | `stable` | Gestores e analistas      | Restrito — apenas geração e exploração de dados |
 
-**`main`** é a branch de desenvolvimento ativa. Código validado é mergeado periodicamente para `stable`.
+**`main`** é a branch de desenvolvimento ativa. Código validado é propagado para `stable` via force push.
+
+### Fluxo de atualização de `stable`
+
+**NUNCA** mergear `stable` em `main`. O fluxo é unidirecional:
+
+```bash
+# Após commit e push em main:
+git push origin main:stable --force
+```
+
+`stable` tem commits próprios (CLAUDE.md com restrições) que NÃO devem entrar em `main`.
+Mergear `stable` em `main` contamina `main` com restrições de agente destinadas apenas a gestores.
+
+Se `stable` rejeitar o push por non-fast-forward, a causa é divergência intencional (commits exclusivos de `stable`).
+Solução correta: force push. Nunca `git merge origin/stable`.
 
 ### Restrições do agente em `stable`
 

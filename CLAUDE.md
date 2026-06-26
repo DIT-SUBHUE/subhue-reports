@@ -1,5 +1,25 @@
 # subhue-reports — guia para desenvolvimento com IA
 
+## Branches e Git
+
+| Branch   | Público         | Comportamento                                      |
+|----------|-----------------|----------------------------------------------------|
+| `main`   | Desenvolvedores | Sem restrições — editar código, commits, testes    |
+| `stable` | Gestores        | Restrito — apenas geração e exploração de dados    |
+
+**Fluxo obrigatório:**
+
+```bash
+# Propagar feature de main para stable:
+git push origin main:stable --force
+```
+
+**PROIBIDO:** `git merge origin/stable` em `main`.
+`stable` tem commits exclusivos (CLAUDE.md com restrições de agente) que não devem entrar em `main`.
+Se `stable` rejeitar push por non-fast-forward → force push, nunca merge reverso.
+
+---
+
 ## Objetivo
 
 Este projeto deve ser simples de navegar, testar e modificar por humanos e agentes de IA.
