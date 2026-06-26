@@ -207,6 +207,31 @@ sync-dry-run:
         --password $DADOS_DOCS_API_PASSWORD \
         --dry-run
 
+# ── Skills (backends chamáveis por Claude Code) ───────────────────────────────
+
+# Explora uma fonte: colunas, volume e amostra (ex: just explore silver_timed.fat_censo)
+explore source:
+    #!/usr/bin/env python3
+    import json, sys
+    from pathlib import Path
+    sys.path.insert(0, "src")
+    from subhue_reports.skills.tools import dispatch_tool
+    from subhue_reports.registry.loader import build_registry, build_source_registry, load_manifest
+    manifest = load_manifest()
+    registry = {**build_registry(manifest), **build_source_registry(manifest)}
+    result = dispatch_tool("explore_source", {"source": "{{source}}", "limit": 20}, registry)
+    print(result)
+
+# Detalhe completo de um model dbt (ex: just model-detail fat_censo_leito_ativo)
+model-detail name:
+    #!/usr/bin/env python3
+    import json, sys
+    sys.path.insert(0, "src")
+    from subhue_reports.skills.tools import dispatch_tool
+    from subhue_reports.registry.loader import build_registry, load_manifest
+    registry = build_registry(load_manifest())
+    print(dispatch_tool("get_model_detail", {"name": "{{name}}"}, registry))
+
 # ── Testes ────────────────────────────────────────────────────────────────────
 
 # Roda unit tests (sem integração)

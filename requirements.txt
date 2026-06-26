@@ -1,6 +1,7 @@
 # renderer
 plotly>=5.0
 
+
 # cache e query
 duckdb>=0.10
 pyarrow>=14.0

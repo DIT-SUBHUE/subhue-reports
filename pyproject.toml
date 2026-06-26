@@ -44,6 +44,9 @@ ignore = []
 "src/subhue_reports/renderer/relatorio.py" = ["E501"]
 "src/subhue_reports/renderer/documentacao.py" = ["E501"]
 "src/subhue_reports/renderer/dashboard.py" = ["E501"]
+# JSON schema embedado nos prompts e tool descriptions
+"src/subhue_reports/skills/prompts.py" = ["E501"]
+"src/subhue_reports/skills/tools.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
