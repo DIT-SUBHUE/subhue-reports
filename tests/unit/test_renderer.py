@@ -1,5 +1,62 @@
 """Testes unitários do módulo renderer (sem I/O externo exceto fixtures)."""
 
+from pathlib import Path
+
+
+# ── _output helpers ───────────────────────────────────────────────────────────
+
+class TestSlugify:
+    def test_titulo_simples(self):
+        from subhue_reports.renderer._output import slugify
+        assert slugify("Painel Geral") == "PAINEL_GERAL"
+
+    def test_remove_acentos(self):
+        from subhue_reports.renderer._output import slugify
+        assert slugify("Ocupação Média") == "OCUPACAO_MEDIA"
+
+    def test_colapsa_multiplos_underscores(self):
+        from subhue_reports.renderer._output import slugify
+        assert slugify("A  B") == "A_B"
+
+    def test_caracteres_especiais(self):
+        from subhue_reports.renderer._output import slugify
+        assert slugify("fat_censo_leito_ativo") == "FAT_CENSO_LEITO_ATIVO"
+
+
+class TestResolveOutputDir:
+    def test_tipo_dashboard(self):
+        from subhue_reports.renderer._output import resolve_output_dir
+        dados = {"meta": {"titulo": "Painel", "tipo_documento": "dashboard"}}
+        path = resolve_output_dir(dados, Path("/tmp/reports"))
+        assert "dashboards" in str(path)
+        assert "PAINEL" in str(path)
+
+    def test_tipo_relatorio(self):
+        from subhue_reports.renderer._output import resolve_output_dir
+        dados = {"meta": {"titulo": "Rel", "tipo_documento": "relatorio"}}
+        path = resolve_output_dir(dados, Path("/tmp/reports"))
+        assert "relatorios" in str(path)
+
+    def test_tipo_documentacao(self):
+        from subhue_reports.renderer._output import resolve_output_dir
+        dados = {"meta": {"titulo": "Doc", "tipo_documento": "documentacao"}}
+        path = resolve_output_dir(dados, Path("/tmp/reports"))
+        assert "documentacoes" in str(path)
+
+    def test_tipo_ausente_usa_relatorios(self):
+        from subhue_reports.renderer._output import resolve_output_dir
+        dados = {"meta": {"titulo": "X"}}
+        path = resolve_output_dir(dados, Path("/tmp/reports"))
+        assert "relatorios" in str(path)
+
+    def test_formato_timestamp(self):
+        from subhue_reports.renderer._output import resolve_output_dir
+        dados = {"meta": {"titulo": "T", "tipo_documento": "relatorio"}}
+        path = resolve_output_dir(dados, Path("/tmp/reports"))
+        nome_dir = path.name  # 2026_06_26__15_52__T
+        parts = nome_dir.split("__")
+        assert len(parts) == 3
+        assert len(parts[0]) == 10  # YYYY_MM_DD
 
 
 # ── _html helpers ─────────────────────────────────────────────────────────────
@@ -434,3 +491,112 @@ class TestRenderChangelog:
         html = render_changelog(sec)
         assert "FEAT" in html
         assert "FIX" in html
+
+
+# ── render dispatcher: dashboard ─────────────────────────────────────────────
+
+_DADOS_DASHBOARD = {
+    "meta": {"titulo": "Painel Teste", "tipo_documento": "dashboard"},
+    "filtros": [
+        {
+            "id": "periodo",
+            "label": "Período",
+            "campo": "periodo",
+            "todos_label": "Todos",
+            "opcoes": ["2026-06"],
+        }
+    ],
+    "dados": {
+        "vendas": [
+            {"produto": "A", "periodo": "2026-06", "valor": 100.0},
+            {"produto": "B", "periodo": "2026-06", "valor": 200.0},
+        ]
+    },
+    "paineis": [
+        {
+            "id": "m1",
+            "tipo": "metrica",
+            "titulo": "Valor Total",
+            "dataset": "vendas",
+            "campo": "valor",
+            "agregacao": "soma",
+            "formato": "numero",
+            "largura": "quarto",
+            "filtros_ativos": ["periodo"],
+        },
+        {
+            "id": "g1",
+            "tipo": "grafico",
+            "titulo": "Por Produto",
+            "dataset": "vendas",
+            "chart_type": "bar",
+            "x": "produto",
+            "y": "valor",
+            "largura": "metade",
+            "filtros_ativos": ["periodo"],
+        },
+        {
+            "id": "t1",
+            "tipo": "tabela",
+            "titulo": "Detalhamento",
+            "dataset": "vendas",
+            "colunas": [
+                {"campo": "produto", "label": "Produto"},
+                {"campo": "valor", "label": "Valor", "formato": "numero"},
+            ],
+            "largura": "completo",
+            "filtros_ativos": ["periodo"],
+        },
+    ],
+}
+
+
+class TestRenderDashboard:
+    def test_html_contem_titulo(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        html = render_dashboard(_DADOS_DASHBOARD)
+        assert "Painel Teste" in html
+
+    def test_html_contem_filtro(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        html = render_dashboard(_DADOS_DASHBOARD)
+        assert 'id="filtro_periodo"' in html
+        assert "Período" in html
+
+    def test_html_contem_paineis(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        html = render_dashboard(_DADOS_DASHBOARD)
+        assert 'id="val_m1"' in html
+        assert 'id="chart_g1"' in html
+        assert 'id="tbody_t1"' in html
+
+    def test_html_embute_dados(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        html = render_dashboard(_DADOS_DASHBOARD)
+        assert '"vendas"' in html
+        assert '"produto"' in html
+
+    def test_html_contem_js_reativo(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        html = render_dashboard(_DADOS_DASHBOARD)
+        assert "Plotly.react" in html
+        assert "atualizar" in html
+
+    def test_render_dispatcher_tipo_dashboard(self):
+        from subhue_reports.renderer import render
+
+        html = render(_DADOS_DASHBOARD)
+        assert "Painel Teste" in html
+        assert "dash-grid" in html
+
+    def test_painel_tipo_desconhecido_nao_quebra(self):
+        from subhue_reports.renderer.dashboard import render_dashboard
+
+        dados = {**_DADOS_DASHBOARD, "paineis": [{"id": "x", "tipo": "radar", "dataset": "vendas"}]}
+        html = render_dashboard(dados)
+        assert "radar" in html
