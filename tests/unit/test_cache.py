@@ -259,3 +259,119 @@ class TestParquetPathHelpers:
         from subhue_reports.cache.query import parquet_path_for
         path = parquet_path_for("gold_timed.agg", "2026-06", cache_dir="/tmp/cache")
         assert path == "/tmp/cache/gold_timed.agg_2026-06.parquet"
+
+
+# ── SourceExploration ─────────────────────────────────────────────────────────
+
+class TestSourceExploration:
+    def _make(self, **overrides):
+        from subhue_reports.cache.query import SourceExploration
+        defaults = {
+            "columns": ["id", "nome", "valor"],
+            "sample": [{"id": 1, "nome": "a", "valor": 10.0}],
+            "row_count": 42,
+            "parquet_path": "/tmp/fonte.parquet",
+        }
+        return SourceExploration(**{**defaults, **overrides})
+
+    def test_atributos_acessiveis(self):
+        exp = self._make()
+        assert exp.columns == ["id", "nome", "valor"]
+        assert exp.row_count == 42
+        assert exp.parquet_path == "/tmp/fonte.parquet"
+        assert len(exp.sample) == 1
+
+    def test_to_dict_contem_chaves_esperadas(self):
+        exp = self._make()
+        d = exp.to_dict()
+        assert set(d.keys()) == {"columns", "row_count", "sample", "parquet_path"}
+
+    def test_to_dict_preserva_valores(self):
+        exp = self._make(row_count=99)
+        assert exp.to_dict()["row_count"] == 99
+
+    def test_to_dict_sample_e_lista_de_dicts(self):
+        exp = self._make()
+        assert isinstance(exp.to_dict()["sample"], list)
+        assert isinstance(exp.to_dict()["sample"][0], dict)
+
+
+# ── explore_source ────────────────────────────────────────────────────────────
+
+def _create_parquet(path: Path) -> None:
+    """Cria parquet mínimo para testes usando DuckDB."""
+    import duckdb
+    duckdb.connect().execute(
+        f"COPY (SELECT 1 AS id, 'alpha' AS nome, 10.5 AS valor "
+        f"UNION ALL SELECT 2, 'beta', 20.0) TO '{path}' (FORMAT PARQUET)"
+    )
+
+
+class TestExploreSource:
+    def test_retorna_source_exploration(self, tmp_path):
+        from subhue_reports.cache.query import SourceExploration, explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={})
+
+        assert isinstance(result, SourceExploration)
+
+    def test_colunas_corretas(self, tmp_path):
+        from subhue_reports.cache.query import explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={})
+
+        assert "id" in result.columns
+        assert "nome" in result.columns
+        assert "valor" in result.columns
+
+    def test_row_count_correto(self, tmp_path):
+        from subhue_reports.cache.query import explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={})
+
+        assert result.row_count == 2
+
+    def test_sample_respeita_limit(self, tmp_path):
+        from subhue_reports.cache.query import explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={}, limit=1)
+
+        assert len(result.sample) == 1
+
+    def test_parquet_path_no_resultado(self, tmp_path):
+        from subhue_reports.cache.query import explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={})
+
+        assert result.parquet_path == str(parquet)
+
+    def test_sample_e_lista_de_dicts(self, tmp_path):
+        from subhue_reports.cache.query import explore_source
+
+        parquet = tmp_path / "fonte.parquet"
+        _create_parquet(parquet)
+
+        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+            result = explore_source("silver_timed.fat_censo", {}, registry={})
+
+        assert all(isinstance(row, dict) for row in result.sample)
