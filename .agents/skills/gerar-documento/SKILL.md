@@ -41,20 +41,64 @@ Exemplos:
 
 ### 4. Explorar os dados
 
-Use os comandos abaixo para entender as fontes disponíveis antes de gerar qualquer JSON:
+**Fluxo eficiente — siga esta ordem:**
+
+#### 4a. Descobrir o model (sem banco)
 
 ```bash
-just manifest-catalog                    # lista models dbt disponíveis
-just manifest-catalog-model <nome>       # detalhe de um model com colunas
-just manifest-sources                    # fontes raw agrupadas por source_name
-just explore <schema.tabela>             # colunas, volume e amostra da fonte
-just query "<sql>"                       # SQL DuckDB sobre parquets em cache
+just manifest-catalog-search <termo>     # acha nome exato do model (sem colunas)
+just manifest-catalog-model <nome>       # colunas + descrições do manifest (sem DB)
+just manifest-sources-search <termo>     # busca em fontes raw
 ```
 
-Regras de exploração:
-- Use `list_models` / `manifest-catalog` se não souber quais fontes existem.
-- Use `explore` antes de `query` para entender a estrutura.
-- Não invente nomes de colunas ou tabelas — confirme nos dados reais.
+> `manifest-catalog-model` usa o **nome curto** do model, sem schema.
+> Ex: `fat_boletim_categorizado_timed`, não `silver_timed.fat_boletim_categorizado_timed`.
+> Retorna todas as colunas com descrições — use isso para identificar colunas relevantes
+> antes de qualquer consulta ao banco.
+
+#### 4b. Verificar cache antes de consultar
+
+```bash
+just cache-status                        # lista parquets disponíveis localmente
+```
+
+- **Cache com dados** → use `just query "<SQL DuckDB>"` com `FROM 'data/cache/<fonte>_*.parquet'`
+- **Cache vazio** → use Python direto no Postgres para agregações:
+
+```python
+# Script direto — para agregações quando cache está vazio
+import sys, os
+sys.path.insert(0, 'src')
+for line in open('.env'):
+    line = line.strip()
+    if line and '=' in line and not line.startswith('#'):
+        k, v = line.split('=', 1)
+        os.environ[k] = v
+from subhue_reports.cache.connection import connect
+import json
+conn = connect()
+with conn.cursor() as cur:
+    cur.execute("<SQL Postgres agregado>")
+    cols = [d.name for d in cur.description]
+    rows = cur.fetchall()
+    print(json.dumps([dict(zip(cols, r)) for r in rows], default=str))
+conn.close()
+```
+
+#### 4c. `just explore` — usar apenas quando necessário
+
+`just explore <schema.tabela>` retorna 20 linhas completas × todas as colunas.
+**Caro em tokens.** Use somente quando:
+- o manifest não tiver metadados suficientes de colunas, **ou**
+- precisar confirmar volume total da tabela.
+
+Nunca use `just explore` apenas para descobrir nomes de colunas — o manifest já tem isso.
+
+#### Regras gerais
+
+- Não invente nomes de colunas ou tabelas — confirme no manifest antes de consultar.
+- Prefira múltiplas queries agregadas em paralelo a uma única query grande.
+- Use o schema completo `schema.tabela` no SQL Postgres (ex: `silver_timed.fat_boletim_categorizado_timed`).
 
 ### 5. Modo Colaborativo — apresentar proposta
 
