@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# subhue-reports — dados gerados localmente
+data/cache/
+data/manifest/
+data/reports/
+reports/relatorios/
+reports/documentacoes/
+reports/dashboards/
+reports/exemplos/
+.env

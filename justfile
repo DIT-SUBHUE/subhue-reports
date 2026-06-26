@@ -144,9 +144,13 @@ duckdb-shell:
 
 # ── Render ────────────────────────────────────────────────────────────────────
 
-# Gera HTML a partir de JSON ou diretório — detecta tipo pelo meta.tipo_documento
+# Gera HTML a partir de JSON ou diretório — salva em reports/{tipo}/{ts}__{NOME}/
 render src:
     python -m subhue_reports.renderer {{src}}
+
+# Gera HTML em caminho explícito (anula estrutura automática de diretórios)
+render-to src out:
+    python -m subhue_reports.renderer {{src}} -o {{out}}
 
 # Lista seções de um diretório (idx, tipo, arquivo)
 render-show dir:
@@ -170,6 +174,9 @@ report-render src:
 
 doc-render src:
     python -m subhue_reports.renderer.documentacao {{src}}
+
+dash-render src:
+    python -m subhue_reports.renderer.dashboard {{src}}
 
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
@@ -214,6 +221,20 @@ test-integration:
 test-all:
     pytest -v
 
+# Regenera HTMLs de validação visual a partir dos fixtures em tests/fixtures/
+# Útil para inspecionar impacto visual após mudanças no renderer
+render-fixtures:
+    mkdir -p reports/exemplos
+    python -m subhue_reports.renderer tests/fixtures/exemplo_relatorio.json \
+        -o reports/exemplos/exemplo_relatorio.html
+    python -m subhue_reports.renderer tests/fixtures/exemplo_documentacao.json \
+        -o reports/exemplos/exemplo_documentacao.html
+    python -m subhue_reports.renderer tests/fixtures/exemplo_dashboard.json \
+        -o reports/exemplos/exemplo_dashboard.html
+    @echo "abrir: reports/exemplos/exemplo_relatorio.html"
+    @echo "abrir: reports/exemplos/exemplo_documentacao.html"
+    @echo "abrir: reports/exemplos/exemplo_dashboard.html"
+
 # ── Lint & Format ─────────────────────────────────────────────────────────────
 
 # Verifica código com ruff
@@ -234,9 +255,10 @@ lint-fix:
 install:
     pip install -r requirements.txt
 
-# Cria diretórios de dados
+# Cria diretórios de dados e saída
 dirs:
-    mkdir -p data/manifest data/cache data/reports
+    mkdir -p data/manifest data/cache
+    mkdir -p reports/relatorios reports/documentacoes reports/dashboards reports/exemplos
 
 # Copia .env.example para .env
 env-setup:
