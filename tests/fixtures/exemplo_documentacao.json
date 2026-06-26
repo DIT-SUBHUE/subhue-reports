@@ -1,0 +1,149 @@
+{
+  "meta": {
+    "titulo": "fat_censo_leito_ativo",
+    "subtitulo": "silver_timed.fat_censo_leito_ativo",
+    "versao": "v2.1",
+    "autores": ["Moscarde", "Equipe DIID"],
+    "periodo": "Atualizado em 26/06/2026",
+    "tipo_documento": "documentacao",
+    "data_hora_geracao": "2026-06-26T09:15:00-03:00"
+  },
+  "secoes": [
+    {
+      "tipo": "visao_geral",
+      "titulo": "Visão Geral",
+      "descricao": "Fato de leitos ativos por unidade de saúde e período, com taxa de ocupação calculada. Grain: unidade × tipo_leito × dia. Uma linha por combinação de estabelecimento, tipo de leito e data de referência.",
+      "detalhes": [
+        "Grain: estabelecimento_gid × tipo_leito × periodo (dia)",
+        "Fonte primária: TIMED-DTW — tabela raw_timed_dtw.fat_estabelecimento",
+        "Atualização: extração diária às 06h via DAG census_daily",
+        "Escopo: todas as unidades SUBHUE com leitos cadastrados no TIMED",
+        "Leitos em manutenção são incluídos com flag bloqueado = true"
+      ]
+    },
+    {
+      "tipo": "dependencias",
+      "titulo": "Dependências",
+      "upstream": [
+        {"nome": "raw_timed_dtw.fat_estabelecimento", "descricao": "Registro bruto de leitos por turno (TIMED-DTW)"},
+        {"nome": "raw_timed_dtw.dim_estabelecimento", "descricao": "Cadastro de unidades — nome, tipo, CNES"},
+        {"nome": "silver_timed.dim_estabelecimento_ativo", "descricao": "Dimensão filtrada de unidades ativas"}
+      ],
+      "downstream": [
+        {"nome": "gold_timed.agg_ocupacao_mensal", "descricao": "Agregação mensal de ocupação por unidade"},
+        {"nome": "gold_timed.agg_ocupacao_tipo_leito", "descricao": "Ocupação segmentada por tipo de leito"},
+        "reports.censo_mensal_subhue"
+      ],
+      "nota": "Dependência cíclica não existe. fat_censo_leito_ativo não é usado como fonte de nenhum modelo silver_timed."
+    },
+    {
+      "tipo": "colunas",
+      "titulo": "Colunas",
+      "nota": "Todas as colunas de auditoria (_created_at, _updated_at, _source) são herdadas do modelo base silver_timed._base_fato.",
+      "items": [
+        {"nome": "gid",                 "tipo_dado": "UUID",      "pk": true,  "obrigatorio": true,  "descricao": "Chave surrogate gerada por dbt (md5 do fqn + grain)"},
+        {"nome": "periodo",             "tipo_dado": "DATE",      "pk": false, "obrigatorio": true,  "descricao": "Data de referência do censo (truncada ao dia)"},
+        {"nome": "estabelecimento_gid", "tipo_dado": "UUID",      "pk": false, "obrigatorio": true,  "descricao": "FK para silver_timed.dim_estabelecimento_ativo.gid"},
+        {"nome": "tipo_leito",          "tipo_dado": "VARCHAR",   "pk": false, "obrigatorio": true,  "descricao": "Classificação do leito: 'clinico', 'uti', 'obs', 'pediatrico'"},
+        {"nome": "leitos_disponiveis",  "tipo_dado": "INTEGER",   "pk": false, "obrigatorio": true,  "descricao": "Total de leitos disponíveis (excluídos os bloqueados)"},
+        {"nome": "leitos_ocupados",     "tipo_dado": "INTEGER",   "pk": false, "obrigatorio": true,  "descricao": "Total de leitos com paciente registrado no período"},
+        {"nome": "leitos_bloqueados",   "tipo_dado": "INTEGER",   "pk": false, "obrigatorio": true,  "descricao": "Leitos fora de operação (manutenção, interdição sanitária)"},
+        {"nome": "taxa_ocupacao",       "tipo_dado": "NUMERIC",   "pk": false, "obrigatorio": false, "descricao": "leitos_ocupados / leitos_disponiveis. NULL quando leitos_disponiveis = 0"},
+        {"nome": "bloqueado",           "tipo_dado": "BOOLEAN",   "pk": false, "obrigatorio": true,  "descricao": "True quando a unidade não tem nenhum leito disponível no período"},
+        {"nome": "_created_at",         "tipo_dado": "TIMESTAMP", "pk": false, "obrigatorio": true,  "incrementa": true, "descricao": "Timestamp de inserção no DW (UTC)"},
+        {"nome": "_source",             "tipo_dado": "VARCHAR",   "pk": false, "obrigatorio": true,  "descricao": "Identificador da DAG que gerou o registro"}
+      ]
+    },
+    {
+      "tipo": "especificacao",
+      "titulo": "Especificação Técnica",
+      "campos": [
+        {"label": "Schema",          "valor": "silver_timed"},
+        {"label": "Model name",      "valor": "fat_censo_leito_ativo"},
+        {"label": "Materialização",  "valor": "incremental"},
+        {"label": "Unique key",      "valor": "gid"},
+        {"label": "Partition by",    "valor": "periodo (month)"},
+        {"label": "Estratégia inc.", "valor": "insert_overwrite — substitui a partição do dia"},
+        {"label": "SLO atualização", "valor": "Disponível até 07h do dia seguinte"},
+        {"label": "Owner",           "valor": "Equipe DIID — SUBHUE"},
+        {"label": "DAG Airflow",     "valor": {"code": "census_daily"}},
+        {"label": "SQL checksum",    "valor": {"code": "a3f8c92d1b4e7f06..."}}
+      ],
+      "nota": "Modelo incremental: re-execução com --full-refresh recalcula toda a série histórica (desde 2022-01-01). Custo estimado: 45 min."
+    },
+    {
+      "tipo": "observacoes",
+      "titulo": "Observações",
+      "items": [
+        {
+          "tipo": "warn",
+          "titulo": "Divergências com SISREG esperadas em até 5%:",
+          "texto": "O TIMED-DTW usa leitura às 06h; o SISREG consolida à meia-noite. Diferenças de até 5% são estruturais e não indicam erro de lançamento."
+        },
+        {
+          "tipo": "limit",
+          "titulo": "Leitos pediátricos disponíveis apenas a partir de 2023-07-01:",
+          "texto": "Unidades que não reportavam separação pediátrica antes dessa data têm tipo_leito = 'clinico' para o período anterior."
+        },
+        {
+          "tipo": "info",
+          "titulo": "taxa_ocupacao pode ser NULL:",
+          "texto": "Acontece quando leitos_disponiveis = 0 (unidade interditada). Filtrar com WHERE taxa_ocupacao IS NOT NULL para análises de média."
+        },
+        {
+          "tipo": "ok",
+          "titulo": "Compatível com DuckDB e psycopg2:",
+          "texto": "Parquet exportado via extractor.py normaliza UUID e NUMERIC para tipos Python nativos."
+        }
+      ]
+    },
+    {
+      "tipo": "changelog",
+      "titulo": "Histórico de Mudanças",
+      "items": [
+        {
+          "versao": "v2.1",
+          "data": "15/06/2026",
+          "tipo": "feat",
+          "autor": "Moscarde",
+          "descricao": "Adicionada coluna leitos_bloqueados e flag bloqueado para suporte ao protocolo de desvio de demanda"
+        },
+        {
+          "versao": "v2.0",
+          "data": "03/03/2026",
+          "tipo": "break",
+          "autor": "Moscarde",
+          "descricao": "Grain alterado: removida granularidade por turno (manhã/tarde/noite). Modelo agora consolida no dia. Dados anteriores reprocessados."
+        },
+        {
+          "versao": "v1.3",
+          "data": "10/11/2025",
+          "tipo": "fix",
+          "autor": "Equipe DIID",
+          "descricao": "Correção de duplicatas quando DAG executava mais de uma vez no mesmo dia (dedup por gid)"
+        },
+        {
+          "versao": "v1.2",
+          "data": "01/07/2025",
+          "tipo": "feat",
+          "autor": "Moscarde",
+          "descricao": "Inclusão de tipo_leito 'pediatrico' após padronização do TIMED-DTW nas unidades pediátricas"
+        },
+        {
+          "versao": "v1.1",
+          "data": "14/04/2025",
+          "tipo": "refactor",
+          "autor": "Equipe DIID",
+          "descricao": "Extração de lógica de taxa_ocupacao para macro dbt calc_taxa_ocupacao() — reutilizada em 4 modelos"
+        },
+        {
+          "versao": "v1.0",
+          "data": "10/01/2025",
+          "tipo": "docs",
+          "autor": "Moscarde",
+          "descricao": "Documentação inicial do modelo após migração do script legado para dbt"
+        }
+      ]
+    }
+  ]
+}

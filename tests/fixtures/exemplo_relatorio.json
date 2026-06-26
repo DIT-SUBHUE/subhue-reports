@@ -1,0 +1,396 @@
+{
+  "meta": {
+    "titulo": "Galeria de Gráficos — Tipos Plotly Disponíveis",
+    "subtitulo": "Validação visual de todos os chart types suportados pelo renderer",
+    "periodo": "Junho / 2026",
+    "fontes": ["silver_timed.fat_censo_leito_ativo"],
+    "tipo_documento": "relatorio",
+    "data_hora_geracao": "2026-06-26T09:15:00-03:00"
+  },
+  "secoes": [
+    {
+      "tipo": "contexto",
+      "objetivo": "Demonstrar todos os tipos de gráfico Plotly suportados pelo renderer, usando dados fictícios de ocupação hospitalar do SUBHUE.",
+      "descricao": "O renderer aceita qualquer Figure JSON válido do Plotly. O campo 'figura' recebe {data, layout} — o layout é mesclado com os defaults SUBHUE (paleta, fonte, fundo transparente, height 260). Apenas o layout.title.text é ignorado: o título é controlado pelo campo 'titulo' da seção."
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Bar — Agrupado",
+      "subtitulo": "ocupação por tipo de leito e unidade",
+      "nota": "type: 'bar' com barmode: 'group'. Ideal para comparar categorias lado a lado.",
+      "figura": {
+        "data": [
+          {
+            "type": "bar",
+            "name": "Clínico",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "HEC"],
+            "y": [96.8, 93.3, 88.1, 79.2, 96.6]
+          },
+          {
+            "type": "bar",
+            "name": "UTI",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "HEC"],
+            "y": [98.2, 91.0, null, null, 95.4]
+          },
+          {
+            "type": "bar",
+            "name": "Observação",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "HEC"],
+            "y": [89.3, 87.5, 95.8, 64.6, 91.2]
+          }
+        ],
+        "layout": {
+          "barmode": "group",
+          "yaxis": {"ticksuffix": "%", "range": [0, 110]},
+          "shapes": [
+            {
+              "type": "line", "xref": "paper", "x0": 0, "x1": 1,
+              "y0": 95, "y1": 95,
+              "line": {"color": "#dc2626", "width": 1, "dash": "dot"}
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Bar — Empilhado (stacked)",
+      "subtitulo": "composição de leitos por unidade",
+      "nota": "type: 'bar' com barmode: 'stack'. Ideal para mostrar composição proporcional.",
+      "figura": {
+        "data": [
+          {
+            "type": "bar",
+            "name": "Ocupados",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "CER", "HEC"],
+            "y": [271, 196, 46, 38, 53, 309]
+          },
+          {
+            "type": "bar",
+            "name": "Disponíveis (livres)",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "CER", "HEC"],
+            "y": [9, 14, 2, 10, 7, 11]
+          },
+          {
+            "type": "bar",
+            "name": "Bloqueados",
+            "x": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "CER", "HEC"],
+            "y": [4, 2, 0, 3, 1, 6],
+            "marker": {"color": "#94a3b8"}
+          }
+        ],
+        "layout": {
+          "barmode": "stack",
+          "yaxis": {"title": {"text": "Leitos"}}
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Bar — Horizontal",
+      "subtitulo": "ranking de ocupação por unidade",
+      "nota": "type: 'bar' com orientation: 'h'. Ideal para listas longas de categorias ou rankings.",
+      "figura": {
+        "data": [
+          {
+            "type": "bar",
+            "orientation": "h",
+            "name": "Taxa de ocupação",
+            "x": [56.3, 64.6, 79.2, 88.3, 93.3, 95.8, 96.6, 96.8],
+            "y": ["UPA Leste", "UPA Oeste", "UPA Sul", "CER Metro", "HRS", "UPA Norte", "HEC", "HMSF"],
+            "text": ["56,3%", "64,6%", "79,2%", "88,3%", "93,3%", "95,8%", "96,6%", "96,8%"],
+            "textposition": "outside",
+            "marker": {
+              "color": [
+                "#3b82f6", "#3b82f6", "#16a34a",
+                "#f97316", "#f97316", "#dc2626", "#dc2626", "#dc2626"
+              ]
+            }
+          }
+        ],
+        "layout": {
+          "height": 320,
+          "xaxis": {"ticksuffix": "%", "range": [0, 115]},
+          "showlegend": false,
+          "margin": {"l": 100, "r": 40, "t": 20, "b": 36}
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Line — Série Temporal",
+      "subtitulo": "evolução da ocupação média — junho/2026",
+      "nota": "type: 'scatter' com mode: 'lines+markers'. O tipo 'scatter' do Plotly cobre linhas, pontos e combinações.",
+      "figura": {
+        "data": [
+          {
+            "type": "scatter",
+            "mode": "lines+markers",
+            "name": "Ocupação geral",
+            "x": ["01/06","03/06","05/06","07/06","09/06","11/06","13/06","15/06","17/06","19/06","21/06","23/06","25/06"],
+            "y": [81.2, 82.5, 80.9, 83.1, 84.7, 83.9, 85.2, 83.1, 88.4, 90.1, 91.6, 92.3, 91.4],
+            "line": {"width": 2}
+          },
+          {
+            "type": "scatter",
+            "mode": "lines+markers",
+            "name": "UTI",
+            "x": ["01/06","03/06","05/06","07/06","09/06","11/06","13/06","15/06","17/06","19/06","21/06","23/06","25/06"],
+            "y": [86.4, 87.1, 85.8, 88.2, 90.3, 89.7, 91.2, 90.5, 93.1, 94.8, 95.2, 94.6, 93.9],
+            "line": {"width": 2, "dash": "dash"}
+          }
+        ],
+        "layout": {
+          "yaxis": {"ticksuffix": "%", "range": [70, 100]},
+          "shapes": [
+            {
+              "type": "line", "xref": "paper", "x0": 0, "x1": 1,
+              "y0": 85, "y1": 85,
+              "line": {"color": "#f97316", "width": 1, "dash": "dot"}
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Scatter — Correlação",
+      "subtitulo": "leitos disponíveis × taxa de ocupação",
+      "nota": "type: 'scatter' com mode: 'markers'. Ideal para correlações e distribuições XY.",
+      "figura": {
+        "data": [
+          {
+            "type": "scatter",
+            "mode": "markers+text",
+            "name": "Unidades",
+            "x": [280, 210, 48, 48, 60, 48, 320, 48, 90, 75],
+            "y": [96.8, 93.3, 95.8, 79.2, 88.3, 56.3, 96.6, 64.6, 85.1, 72.4],
+            "text": ["HMSF","HRS","UPA N","UPA S","CER","UPA L","HEC","UPA O","CER S","UPA C"],
+            "textposition": "top center",
+            "textfont": {"size": 9},
+            "marker": {"size": 10, "opacity": 0.8}
+          }
+        ],
+        "layout": {
+          "height": 300,
+          "xaxis": {"title": {"text": "Leitos disponíveis"}},
+          "yaxis": {"title": {"text": "Ocupação (%)"}, "ticksuffix": "%"},
+          "showlegend": false
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Pie — Distribuição",
+      "subtitulo": "leitos por tipo de unidade",
+      "nota": "type: 'pie'. Para donut, adicionar hole: 0.4 no trace. Legenda posicionada horizontalmente pelos defaults.",
+      "figura": {
+        "data": [
+          {
+            "type": "pie",
+            "labels": ["Hospital", "UPA", "CER", "Outros"],
+            "values": [1210, 288, 150, 45],
+            "hole": 0.4,
+            "textinfo": "label+percent",
+            "textfont": {"size": 11}
+          }
+        ],
+        "layout": {
+          "height": 280,
+          "showlegend": true,
+          "legend": {"orientation": "v", "x": 1, "y": 0.5}
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Heatmap — Mapa de Calor",
+      "subtitulo": "ocupação por unidade × semana (junho/2026)",
+      "nota": "type: 'heatmap'. Ideal para visualizar padrões em duas dimensões categóricas.",
+      "figura": {
+        "data": [
+          {
+            "type": "heatmap",
+            "x": ["Sem 1", "Sem 2", "Sem 3", "Sem 4"],
+            "y": ["HMSF", "HRS", "UPA Norte", "UPA Sul", "CER", "UPA Leste", "HEC"],
+            "z": [
+              [94.1, 95.8, 97.2, 98.1],
+              [90.2, 92.4, 93.8, 96.1],
+              [88.3, 91.7, 95.2, 97.4],
+              [75.1, 78.4, 80.2, 79.8],
+              [85.6, 87.2, 89.1, 91.3],
+              [52.3, 55.8, 58.1, 62.4],
+              [93.8, 95.1, 96.4, 97.8]
+            ],
+            "colorscale": [
+              [0.0, "#dbeafe"],
+              [0.5, "#fef9c3"],
+              [0.75, "#fed7aa"],
+              [1.0, "#fee2e2"]
+            ],
+            "text": [
+              ["94,1%","95,8%","97,2%","98,1%"],
+              ["90,2%","92,4%","93,8%","96,1%"],
+              ["88,3%","91,7%","95,2%","97,4%"],
+              ["75,1%","78,4%","80,2%","79,8%"],
+              ["85,6%","87,2%","89,1%","91,3%"],
+              ["52,3%","55,8%","58,1%","62,4%"],
+              ["93,8%","95,1%","96,4%","97,8%"]
+            ],
+            "texttemplate": "%{text}",
+            "textfont": {"size": 10},
+            "showscale": true,
+            "colorbar": {"ticksuffix": "%", "thickness": 12}
+          }
+        ],
+        "layout": {
+          "height": 300,
+          "margin": {"l": 90, "r": 60, "t": 20, "b": 40}
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Box — Distribuição por Grupo",
+      "subtitulo": "distribuição de taxa de ocupação por tipo de unidade",
+      "nota": "type: 'box'. Mostra mediana, quartis e outliers. Cada trace = um grupo.",
+      "figura": {
+        "data": [
+          {
+            "type": "box",
+            "name": "Hospital",
+            "y": [96.8, 93.3, 96.6, 91.2, 94.5, 88.7, 97.1, 90.3],
+            "boxpoints": "outliers"
+          },
+          {
+            "type": "box",
+            "name": "UPA",
+            "y": [95.8, 79.2, 56.3, 64.6, 88.4, 72.1, 91.3, 68.9, 85.2],
+            "boxpoints": "outliers"
+          },
+          {
+            "type": "box",
+            "name": "CER",
+            "y": [88.3, 85.1, 91.6, 87.4, 89.2],
+            "boxpoints": "outliers"
+          }
+        ],
+        "layout": {
+          "yaxis": {"ticksuffix": "%"},
+          "showlegend": false
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Funnel — Funil de Atendimento",
+      "subtitulo": "conversão do fluxo de regulação hospitalar",
+      "nota": "type: 'funnel'. Ideal para fluxos sequenciais com perda em cada etapa.",
+      "figura": {
+        "data": [
+          {
+            "type": "funnel",
+            "name": "Regulação Jun/2026",
+            "x": [2841, 2314, 1987, 1654, 1598],
+            "y": ["Solicitações recebidas", "Reguladas pelo SISREG", "Vagas localizadas", "Internações efetivadas", "Altas no período"],
+            "textposition": "inside",
+            "textinfo": "value+percent initial",
+            "marker": {
+              "color": ["#3b82f6","#16a34a","#9333ea","#f97316","#0891b2"]
+            }
+          }
+        ],
+        "layout": {
+          "height": 300,
+          "margin": {"l": 200, "r": 40, "t": 20, "b": 20},
+          "showlegend": false
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Area — Área Empilhada",
+      "subtitulo": "evolução de leitos ocupados por tipo",
+      "nota": "type: 'scatter' com fill: 'tonexty' (ou 'tozeroy'). Acumula visualmente as séries.",
+      "figura": {
+        "data": [
+          {
+            "type": "scatter",
+            "mode": "lines",
+            "name": "Clínico",
+            "x": ["01/06","05/06","10/06","15/06","20/06","25/06"],
+            "y": [820, 835, 858, 867, 892, 901],
+            "fill": "tozeroy",
+            "line": {"width": 1}
+          },
+          {
+            "type": "scatter",
+            "mode": "lines",
+            "name": "UTI",
+            "x": ["01/06","05/06","10/06","15/06","20/06","25/06"],
+            "y": [980, 1002, 1045, 1052, 1103, 1118],
+            "fill": "tonexty",
+            "line": {"width": 1}
+          },
+          {
+            "type": "scatter",
+            "mode": "lines",
+            "name": "Observação",
+            "x": ["01/06","05/06","10/06","15/06","20/06","25/06"],
+            "y": [1100, 1130, 1175, 1183, 1241, 1258],
+            "fill": "tonexty",
+            "line": {"width": 1}
+          }
+        ],
+        "layout": {
+          "yaxis": {"title": {"text": "Leitos ocupados"}}
+        }
+      }
+    },
+
+    {
+      "tipo": "grafico",
+      "titulo": "Bar — Split automático",
+      "subtitulo": "taxa de ocupação por unidade — 15 unidades × 3 anos",
+      "nota": "Com 15 categorias no eixo X (> BAR_SPLIT_THRESHOLD = 10), o renderer divide automaticamente em dois gráficos de 7 e 8 unidades. Legenda e dados preservados em ambas as partes.",
+      "figura": {
+        "data": [
+          {
+            "type": "bar",
+            "name": "2023",
+            "x": ["HMSF","HRS","HEC","HSJ","HGF","UPA Norte","UPA Sul","UPA Leste","UPA Oeste","UPA Centro","CER Metro","CER Sul","CER Norte","AME Fortaleza","CAPS AD"],
+            "y": [81.3, 66.6, 72.6, 71.4, 83.7, 82.2, 87.4, 68.1, 76.1, 66.7, 71.2, 78.1, 66.6, 70.8, 81.6]
+          },
+          {
+            "type": "bar",
+            "name": "2024",
+            "x": ["HMSF","HRS","HEC","HSJ","HGF","UPA Norte","UPA Sul","UPA Leste","UPA Oeste","UPA Centro","CER Metro","CER Sul","CER Norte","AME Fortaleza","CAPS AD"],
+            "y": [83.9, 77.4, 84.8, 89.2, 73.1, 89.1, 87.0, 79.8, 76.1, 92.1, 79.7, 74.9, 74.9, 89.9, 85.1]
+          },
+          {
+            "type": "bar",
+            "name": "2025",
+            "x": ["HMSF","HRS","HEC","HSJ","HGF","UPA Norte","UPA Sul","UPA Leste","UPA Oeste","UPA Centro","CER Metro","CER Sul","CER Norte","AME Fortaleza","CAPS AD"],
+            "y": [91.9, 90.7, 87.6, 94.6, 85.1, 87.8, 92.3, 88.9, 92.8, 88.2, 90.3, 79.7, 82.6, 83.6, 80.3]
+          }
+        ],
+        "layout": {
+          "barmode": "group",
+          "height": 320,
+          "yaxis": {"ticksuffix": "%", "range": [0, 115]},
+          "xaxis": {"tickangle": -30}
+        }
+      }
+    }
+  ]
+}
