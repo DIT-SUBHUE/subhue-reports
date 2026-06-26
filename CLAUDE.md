@@ -263,3 +263,22 @@ Evite:
 ## Regra final
 
 Código bom neste projeto é código que dá para encontrar com `rg`, entender rápido, modificar com baixo risco e validar com um comando.
+
+---
+
+## Workflows sob demanda
+
+Workflows detalhados não ficam duplicados neste arquivo.
+
+Quando o usuário pedir para gerar relatório, documentação ou dashboard, use a skill canônica:
+
+`.agents/skills/gerar-documento/SKILL.md`
+
+Essa skill define:
+- perguntas iniciais (tipo e modo)
+- exploração de dados com `just manifest-catalog`, `just explore`, `just query`
+- modo automático ou colaborativo
+- geração de JSON conforme schemas em `src/subhue_reports/skills/prompts.py`
+- renderização via `just render`
+
+Não inventar estrutura de JSON fora dos schemas existentes.
