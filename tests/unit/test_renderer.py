@@ -244,6 +244,51 @@ class TestListSections:
         assert secs[1] == (2, "texto", "02_texto.json")
 
 
+# ── render dispatcher ────────────────────────────────────────────────────────
+
+class TestRender:
+    def test_sem_tipo_documento_usa_relatorio(self):
+        from subhue_reports.renderer import render
+
+        dados = {
+            "meta": {"titulo": "Sem tipo"},
+            "secoes": [{"tipo": "contexto", "objetivo": "O", "descricao": "D"}],
+        }
+        html = render(dados)
+        assert "Sem tipo" in html
+
+    def test_tipo_relatorio_usa_render_report(self):
+        from subhue_reports.renderer import render
+
+        dados = {
+            "meta": {"titulo": "Rel", "tipo_documento": "relatorio"},
+            "secoes": [{"tipo": "contexto", "objetivo": "O", "descricao": "D"}],
+        }
+        html = render(dados)
+        assert "Rel" in html
+
+    def test_tipo_documentacao_usa_render_doc(self):
+        from subhue_reports.renderer import render
+
+        dados = {
+            "meta": {"titulo": "Doc técnica", "tipo_documento": "documentacao"},
+            "secoes": [{"tipo": "visao_geral", "descricao": "Desc", "detalhes": []}],
+        }
+        html = render(dados)
+        assert "Doc técnica" in html
+        assert 'class="toc"' in html
+
+    def test_tipo_invalido_cai_em_relatorio(self):
+        from subhue_reports.renderer import render
+
+        dados = {
+            "meta": {"titulo": "Fallback", "tipo_documento": "desconhecido"},
+            "secoes": [],
+        }
+        html = render(dados)
+        assert "Fallback" in html
+
+
 # ── render_report smoke test ──────────────────────────────────────────────────
 
 _DADOS_SEM_GRAFICO = {

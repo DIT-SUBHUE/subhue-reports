@@ -142,14 +142,14 @@ query sql:
 duckdb-shell:
     duckdb
 
-# ── Relatórios ────────────────────────────────────────────────────────────────
+# ── Render ────────────────────────────────────────────────────────────────────
 
-# Gera HTML a partir de JSON ou diretório de seções
-report-render src:
-    python -m subhue_reports.renderer.relatorio {{src}}
+# Gera HTML a partir de JSON ou diretório — detecta tipo pelo meta.tipo_documento
+render src:
+    python -m subhue_reports.renderer {{src}}
 
-# Lista seções de um diretório de relatório (idx, tipo, arquivo)
-report-show dir:
+# Lista seções de um diretório (idx, tipo, arquivo)
+render-show dir:
     #!/usr/bin/env python3
     from pathlib import Path
     from subhue_reports.renderer.sections import list_sections
@@ -160,13 +160,14 @@ report-show dir:
         for idx, tipo, fname in secs:
             print(f"  {idx:02d}  {tipo:<20}  {fname}")
 
-# Valida JSON de relatório contra schema e fontes
-report-validate json:
+# Valida JSON contra fontes do manifest
+render-validate json:
     python -m subhue_reports.registry.checker {{json}}
 
-# ── Documentações ─────────────────────────────────────────────────────────────
+# Atalhos explícitos (forçam o renderer sem ler meta.tipo_documento)
+report-render src:
+    python -m subhue_reports.renderer.relatorio {{src}}
 
-# Gera HTML de documentação a partir de JSON ou diretório de seções
 doc-render src:
     python -m subhue_reports.renderer.documentacao {{src}}
 
