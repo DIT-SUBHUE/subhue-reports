@@ -128,22 +128,22 @@ class TestCacheKey:
 
 class TestBuildSql:
     def test_sem_filtros_retorna_select_star(self):
-        from subhue_reports.cache.resolver import _build_sql
+        from subhue_reports.cache.resolver import build_sql as _build_sql
         sql = _build_sql("silver_timed.fat_censo", {})
         assert sql == "SELECT * FROM silver_timed.fat_censo"
 
     def test_filtros_viram_where(self):
-        from subhue_reports.cache.resolver import _build_sql
+        from subhue_reports.cache.resolver import build_sql as _build_sql
         sql = _build_sql("silver_timed.fat_censo", {"mes": "2026-06"})
         assert "WHERE mes = '2026-06'" in sql
 
     def test_periodo_excluido_do_where(self):
-        from subhue_reports.cache.resolver import _build_sql
+        from subhue_reports.cache.resolver import build_sql as _build_sql
         sql = _build_sql("silver_timed.fat_censo", {"periodo": "2026-06"})
         assert "WHERE" not in sql
 
     def test_multiplos_filtros_combinados_com_and(self):
-        from subhue_reports.cache.resolver import _build_sql
+        from subhue_reports.cache.resolver import build_sql as _build_sql
         sql = _build_sql("gold_timed.agg", {"mes": "2026-06", "ubs": "1"})
         assert "AND" in sql
 
@@ -314,7 +314,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={})
 
         assert isinstance(result, SourceExploration)
@@ -325,7 +325,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={})
 
         assert "id" in result.columns
@@ -338,7 +338,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={})
 
         assert result.row_count == 2
@@ -349,7 +349,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={}, limit=1)
 
         assert len(result.sample) == 1
@@ -360,7 +360,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={})
 
         assert result.parquet_path == str(parquet)
@@ -371,7 +371,7 @@ class TestExploreSource:
         parquet = tmp_path / "fonte.parquet"
         _create_parquet(parquet)
 
-        with patch("subhue_reports.cache.resolver.resolve_source", return_value=parquet):
+        with patch("subhue_reports.cache.resolver.get_cached_path", return_value=parquet):
             result = explore_source("silver_timed.fat_censo", {}, registry={})
 
         assert all(isinstance(row, dict) for row in result.sample)

@@ -54,7 +54,7 @@ def resolve_source(
         return parquet_path
 
     logger.info("cache miss %s — extraindo do banco", parquet_path.name)
-    sql = _build_sql(source, filters)
+    sql = build_sql(source, filters)
     return extract_to_parquet(
         source=source,
         sql=sql,
@@ -64,6 +64,26 @@ def resolve_source(
         sql_checksum=current_checksum,
         filters=filters,
     )
+
+
+def get_cached_path(
+    source: str,
+    filters: dict,
+    registry: dict[str, RegistryEntry],
+    cache_dir: Path = _DEFAULT_CACHE_DIR,
+) -> Path | None:
+    """Retorna path do parquet se cache válido, None se miss (sem extrair)."""
+    model_name = source.split(".")[-1]
+    model_meta = registry.get(model_name, {})
+    current_version = model_meta.get("version", "")
+    current_checksum = model_meta.get("_sql_checksum", "")
+
+    parquet_path = cache_dir / f"{_cache_key(source, filters)}.parquet"
+    meta_path = parquet_path.with_suffix(".meta.json")
+
+    if _is_cache_valid(parquet_path, meta_path, current_version, current_checksum):
+        return parquet_path
+    return None
 
 
 def _is_cache_valid(
@@ -105,7 +125,7 @@ def _cache_key(source: str, filters: dict) -> str:
     return f"{source}_{periodo}"
 
 
-def _build_sql(source: str, filters: dict) -> str:
+def build_sql(source: str, filters: dict) -> str:
     """Constrói SELECT com filtros de igualdade. Filtros são internos — nunca de input externo."""
     schema, table = source.rsplit(".", 1)
     sql_filters = {k: v for k, v in filters.items() if k != "periodo"}

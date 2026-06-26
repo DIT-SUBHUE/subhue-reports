@@ -82,9 +82,11 @@ def explore_source(
     cache_dir: Path = Path("data/cache"),
 ) -> SourceExploration:
     """
-    Resolve fonte (cache hit/miss) e retorna amostra + metadados em uma chamada.
+    Retorna amostra + metadados da fonte sem extração completa em cache miss.
 
-    Uso típico em skills: substituir dois round-trips (resolve + query) por um.
+    Cache hit: lê parquet local via DuckDB (rápido).
+    Cache miss: query direta no Postgres com LIMIT — não extrai nem salva cache.
+      parquet_path="" indica que cache não foi populado; use resolve_source para extrair.
 
     Exemplo:
         exp = explore_source("silver_timed.fat_censo", {}, registry)
@@ -92,21 +94,41 @@ def explore_source(
         exp.row_count # 45231
         exp.sample    # [{"gid": "...", "periodo": "2026-06", ...}, ...]
     """
-    from subhue_reports.cache.resolver import resolve_source
+    from subhue_reports.cache.resolver import build_sql, get_cached_path
 
-    path = resolve_source(source, filters, registry, cache_dir)
-    path_str = str(path)
+    cached = get_cached_path(source, filters, registry, cache_dir)
 
-    con = duckdb.connect()
-    row_count = con.sql(f"SELECT count(*) FROM '{path_str}'").fetchone()[0]
-    rel = con.sql(f"SELECT * FROM '{path_str}' LIMIT {limit}")
-    columns = [desc[0] for desc in rel.description]
-    sample = [dict(zip(columns, row, strict=True)) for row in rel.fetchall()]
+    if cached:
+        path_str = str(cached)
+        con = duckdb.connect()
+        row_count = con.sql(f"SELECT count(*) FROM '{path_str}'").fetchone()[0]
+        rel = con.sql(f"SELECT * FROM '{path_str}' LIMIT {limit}")
+        columns = [desc[0] for desc in rel.description]
+        sample = [dict(zip(columns, row, strict=True)) for row in rel.fetchall()]
+        parquet_path = path_str
+    else:
+        from subhue_reports.cache.connection import connect
+
+        sql = build_sql(source, filters)
+        conn = connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT COUNT(*) FROM ({sql}) _t")
+                row_count = cur.fetchone()[0]
+                cur.execute(f"{sql} LIMIT {limit}")
+                columns = [desc.name for desc in cur.description]
+                rows = cur.fetchall()
+                sample = [dict(zip(columns, row, strict=True)) for row in rows]
+        finally:
+            conn.rollback()
+            conn.close()
+        parquet_path = ""
+        logger.info("explore_source %s: cache miss — query direta, sem extração", source)
 
     logger.debug(
         "explore_source %s: %d colunas, %d linhas, amostra %d",
         source, len(columns), row_count, len(sample),
     )
     return SourceExploration(
-        columns=columns, sample=sample, row_count=row_count, parquet_path=path_str
+        columns=columns, sample=sample, row_count=row_count, parquet_path=parquet_path
     )
