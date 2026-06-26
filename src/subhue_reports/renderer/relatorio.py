@@ -25,7 +25,13 @@ from subhue_reports.renderer._html import (
     render_pill,
 )
 from subhue_reports.renderer._meta import ensure_generation_timestamp, get_generation_timestamp
-from subhue_reports.renderer._plotly import get_plotly_js, prepare_figure_json
+from subhue_reports.renderer._plotly import (
+    BAR_SPLIT_THRESHOLD,
+    bar_x_categories,
+    get_plotly_js,
+    prepare_figure_json,
+    split_bar_traces,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -271,28 +277,17 @@ def render_tabela(sec: dict) -> str:
   </div>"""
 
 
-def render_grafico(sec: dict, chart_idx: int) -> str:
-    div_id = f"chart_{chart_idx}"
-    titulo = esc(sec.get("titulo", ""))
-    subtitulo = esc(sec.get("subtitulo", ""))
-    fig_raw = sec.get("figura", {"data": [], "layout": {}})
-
+def _chart_inner(div_id: str, fig_raw: dict) -> str:
+    """Retorna div+script de um único gráfico Plotly (sem wrapper .card)."""
     try:
         fig_json_str = prepare_figure_json(fig_raw)
     except Exception as exc:
         return (
-            f'<div class="card"><p style="color:var(--red);font-size:12px">'
-            f"Erro ao processar figura: {esc(str(exc))}</p></div>"
+            f'<p style="color:var(--red);font-size:12px">'
+            f"Erro ao processar figura: {esc(str(exc))}</p>"
         )
-
-    sub_html = f" <span>· {subtitulo}</span>" if subtitulo else ""
-    titulo_html = f'<div class="card-title">{titulo}{sub_html}</div>' if titulo else ""
-    nota_html = _nota_html(sec.get("nota", ""))
     return f"""
-  <div class="card">
-    {titulo_html}
     <div id="{div_id}"></div>
-    {nota_html}
     <script>
       (function() {{
         var fig = {fig_json_str};
@@ -303,7 +298,37 @@ def render_grafico(sec: dict, chart_idx: int) -> str:
         }};
         Plotly.newPlot("{div_id}", fig.data, fig.layout, config);
       }})();
-    </script>
+    </script>"""
+
+
+def render_grafico(sec: dict, chart_idx: int) -> str:
+    titulo = esc(sec.get("titulo", ""))
+    subtitulo = esc(sec.get("subtitulo", ""))
+    fig_raw = sec.get("figura", {"data": [], "layout": {}})
+    sub_html = f" <span>· {subtitulo}</span>" if subtitulo else ""
+    titulo_html = f'<div class="card-title">{titulo}{sub_html}</div>' if titulo else ""
+    nota_html = _nota_html(sec.get("nota", ""))
+
+    cats = bar_x_categories(fig_raw.get("data", []))
+    if len(cats) > BAR_SPLIT_THRESHOLD:
+        mid = len(cats) // 2
+        t1, t2 = split_bar_traces(fig_raw.get("data", []), cats, mid)
+        inner = (
+            _chart_inner(f"chart_{chart_idx}a", {**fig_raw, "data": t1})
+            + _chart_inner(f"chart_{chart_idx}b", {**fig_raw, "data": t2})
+        )
+        return f"""
+  <div class="card">
+    {titulo_html}
+    {inner}
+    {nota_html}
+  </div>"""
+
+    return f"""
+  <div class="card">
+    {titulo_html}
+    {_chart_inner(f"chart_{chart_idx}", fig_raw)}
+    {nota_html}
   </div>"""
 
 
