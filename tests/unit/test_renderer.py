@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 # ── _output helpers ───────────────────────────────────────────────────────────
 
 class TestSlugify:
