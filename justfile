@@ -232,6 +232,25 @@ model-detail name:
     registry = build_registry(load_manifest())
     print(dispatch_tool("get_model_detail", {"name": "{{name}}"}, registry))
 
+# ── Git / Deploy ──────────────────────────────────────────────────────────────
+
+# Propaga main para stable com force push e reaplica restrições de agente no CLAUDE.md
+# NUNCA usar "git push main:stable" diretamente — apaga as restrições de stable
+push-stable:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    RESTRICTIONS=$(cat .claude/stable-restrictions.md)
+    ORIGINAL=$(cat CLAUDE.md)
+    git push origin main:stable --force
+    git fetch origin stable
+    git worktree add /tmp/subhue-stable origin/stable 2>/dev/null || git -C /tmp/subhue-stable pull
+    printf '%s\n\n---\n\n%s' "$RESTRICTIONS" "$ORIGINAL" > /tmp/subhue-stable/CLAUDE.md
+    git -C /tmp/subhue-stable add CLAUDE.md
+    git -C /tmp/subhue-stable commit -m "chore: reaplica restrições de agente em stable"
+    git -C /tmp/subhue-stable push origin HEAD:stable
+    git worktree remove /tmp/subhue-stable --force
+    echo "stable atualizado com restrições de agente aplicadas"
+
 # ── Testes ────────────────────────────────────────────────────────────────────
 
 # Roda unit tests (sem integração)

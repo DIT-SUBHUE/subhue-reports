@@ -10,13 +10,15 @@
 **Fluxo obrigatório:**
 
 ```bash
-# Propagar feature de main para stable:
-git push origin main:stable --force
+# Propagar feature de main para stable (reaplica restrições automaticamente):
+just push-stable
 ```
 
-**PROIBIDO:** `git merge origin/stable` em `main`.
-`stable` tem commits exclusivos (CLAUDE.md com restrições de agente) que não devem entrar em `main`.
-Se `stable` rejeitar push por non-fast-forward → force push, nunca merge reverso.
+**NUNCA** usar `git push origin main:stable` diretamente — apaga as restrições de agente do `CLAUDE.md` de `stable`.
+**NUNCA** `git merge origin/stable` em `main` — contamina `main` com restrições destinadas a gestores.
+
+`stable` tem CLAUDE.md com bloco de restrições gerido por `.claude/stable-restrictions.md`.
+`just push-stable` faz force push + reaplica o bloco automaticamente via worktree.
 
 ---
 

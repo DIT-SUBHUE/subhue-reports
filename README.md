@@ -23,14 +23,13 @@ Projetado para ser operado por agentes de IA (Claude Code, Codex, OpenCode) via 
 
 ```bash
 # Após commit e push em main:
-git push origin main:stable --force
+just push-stable
 ```
 
-`stable` tem commits próprios (CLAUDE.md com restrições) que NÃO devem entrar em `main`.
-Mergear `stable` em `main` contamina `main` com restrições de agente destinadas apenas a gestores.
+`just push-stable` faz force push de `main` em `stable` e reaplica automaticamente o bloco de restrições de agente no `CLAUDE.md` de `stable`. As restrições são geridas em `.claude/stable-restrictions.md`.
 
-Se `stable` rejeitar o push por non-fast-forward, a causa é divergência intencional (commits exclusivos de `stable`).
-Solução correta: force push. Nunca `git merge origin/stable`.
+**NUNCA** usar `git push origin main:stable` diretamente — apaga as restrições.
+**NUNCA** `git merge origin/stable` em `main` — contamina `main` com restrições de gestores.
 
 ### Restrições do agente em `stable`
 
