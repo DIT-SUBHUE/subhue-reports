@@ -57,7 +57,7 @@ class TestManifestUpdateEndToEnd:
         registry = build_registry(manifest)
 
         assert len(registry) > 0
-        for name, meta in registry.items():
+        for _name, meta in registry.items():
             assert "_schema" in meta
             assert "_fqn" in meta
 
