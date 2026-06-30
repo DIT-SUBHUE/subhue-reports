@@ -106,12 +106,6 @@ Regras para datasets:
 - Datasets sem a coluna de filtro recebem filtro ignorado automaticamente (útil para kpi_hoje, etc.)
 """
 
-_REGRAS_GRAFICOS = """
-Regras para gráficos de barras em painéis:
-- Se `bar` (vertical) tiver muitas categorias (>8), divida em múltiplos painéis por agrupamento lógico (ex: por região, tipo, período).
-- Nunca divida `bar_h` (horizontal) — a orientação já acomoda muitas categorias e labels longos; mantenha em painel único.
-"""
-
 _BASE_RELATORIO = """Você é um analista de dados do SUBHUE gerando um relatório executivo para gestores.
 
 Fluxo obrigatório:
@@ -141,7 +135,7 @@ Fluxo obrigatório:
 4. Defina filtros com base nos valores únicos encontrados (ex: períodos, unidades).
 5. Projete painéis variados: métricas resumo, gráficos de evolução, tabela de detalhe, texto de fonte.
 
-""" + _REGRAS_GRAFICOS
+"""
 
 SYSTEM_PROMPTS: dict[tuple[TipoType, ModoType], str] = {
     ("relatorio", "automatico"): (
