@@ -39,7 +39,26 @@ Exemplos:
 - "Documentação do model fat_censo_leito_ativo"
 - "Dashboard de ocupação de leitos com filtro por unidade e período"
 
-### 4. Explorar os dados
+### 4. Aplicar regras de negócio
+
+As regras abaixo são obrigatórias em todo documento gerado:
+
+**RN-01 — Agrupamento por tipo de estabelecimento**
+Em gráficos que comparam indicadores de todas as unidades, incluir também visualização agrupada por tipo de estabelecimento. Extrair o tipo do início do nome do estabelecimento (ex: "Hospital", "UPA", "CER").
+
+**RN-02 — Fonte preferencial para análises**
+Análises devem ser feitas preferencialmente a partir das silvers (`fat_boletim_categorizado`). Ler a documentação das colunas via `just manifest-catalog-model` antes de montar queries.
+
+**RN-03 — Filtro de boletins de emergência**
+Em análises de quantitativos (atendimentos, internações ou outros), quando o tipo de atendimento ou tipo de entrada **não for informado** pelo usuário, perguntar:
+
+> "Devo filtrar apenas boletins de emergência? (`silver_timed.fat_boletim_categorizado.is_boletim_emergencia = TRUE`)"
+
+Aguardar resposta antes de montar a query.
+
+---
+
+### 5. Explorar os dados
 
 Use os comandos abaixo para entender as fontes disponíveis antes de gerar qualquer JSON:
 
@@ -56,7 +75,7 @@ Regras de exploração:
 - Use `explore` antes de `query` para entender a estrutura.
 - Não invente nomes de colunas ou tabelas — confirme nos dados reais.
 
-### 5. Modo Colaborativo — apresentar proposta
+### 6. Modo Colaborativo — apresentar proposta
 
 Antes de gerar o JSON, apresente ao usuário:
 
@@ -68,7 +87,7 @@ Antes de gerar o JSON, apresente ao usuário:
 
 No modo automático, pule esta etapa.
 
-### 6. Gerar o JSON
+### 7. Gerar o JSON
 
 Siga **rigorosamente** o schema correspondente ao tipo escolhido, definido em:
 
@@ -89,7 +108,7 @@ Campos obrigatórios em `meta`: `titulo`, `tipo_documento`.
 Para relatório e documentação, tipos de seção válidos estão listados nos system prompts de `prompts.py`.
 Para dashboard, painéis válidos são: `metrica`, `grafico`, `tabela`, `texto`.
 
-### 7. Renderizar
+### 8. Renderizar
 
 ```bash
 just render <arquivo.json>
