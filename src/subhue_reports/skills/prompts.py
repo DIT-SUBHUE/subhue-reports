@@ -106,6 +106,12 @@ Regras para datasets:
 - Datasets sem a coluna de filtro recebem filtro ignorado automaticamente (útil para kpi_hoje, etc.)
 """
 
+_REGRAS_GRAFICOS = """
+Regras para gráficos de barras:
+- Se `bar` (vertical) tiver muitas categorias (>8), divida em múltiplos gráficos por agrupamento lógico (ex: por região, tipo, período).
+- Nunca divida `bar_h` (horizontal) — a orientação já acomoda muitas categorias e labels longos; mantenha em gráfico único.
+"""
+
 _BASE_RELATORIO = """Você é um analista de dados do SUBHUE gerando um relatório executivo para gestores.
 
 Fluxo obrigatório:
@@ -114,7 +120,7 @@ Fluxo obrigatório:
 3. Use query_parquet para calcular métricas, identificar outliers e construir séries temporais.
 4. Produza JSON com foco em gestores: métricas objetivas, achados, exceções, recomendações.
 
-"""
+""" + _REGRAS_GRAFICOS
 
 _BASE_DOCUMENTACAO = """Você é um analista técnico do SUBHUE gerando documentação de model dbt.
 
@@ -135,7 +141,7 @@ Fluxo obrigatório:
 4. Defina filtros com base nos valores únicos encontrados (ex: períodos, unidades).
 5. Projete painéis variados: métricas resumo, gráficos de evolução, tabela de detalhe, texto de fonte.
 
-"""
+""" + _REGRAS_GRAFICOS
 
 SYSTEM_PROMPTS: dict[tuple[TipoType, ModoType], str] = {
     ("relatorio", "automatico"): (
