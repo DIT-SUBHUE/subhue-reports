@@ -599,3 +599,32 @@ class TestRenderDashboard:
         dados = {**_DADOS_DASHBOARD, "paineis": [{"id": "x", "tipo": "radar", "dataset": "vendas"}]}
         html = render_dashboard(dados)
         assert "radar" in html
+
+
+class TestBarXCategories:
+    def test_retorna_categorias_do_trace_bar_vertical(self):
+        from subhue_reports.renderer._plotly import bar_x_categories
+
+        traces = [{"type": "bar", "x": ["A", "B", "C"], "y": [1, 2, 3]}]
+        assert bar_x_categories(traces) == ["A", "B", "C"]
+
+    def test_ignora_trace_bar_h(self):
+        from subhue_reports.renderer._plotly import bar_x_categories
+
+        traces = [{"type": "bar", "orientation": "h", "x": [1, 2, 3], "y": ["A", "B", "C"]}]
+        assert bar_x_categories(traces) == []
+
+    def test_ignora_bar_h_e_retorna_proximo_bar_vertical(self):
+        from subhue_reports.renderer._plotly import bar_x_categories
+
+        traces = [
+            {"type": "bar", "orientation": "h", "x": [1, 2], "y": ["X", "Y"]},
+            {"type": "bar", "x": ["A", "B"], "y": [10, 20]},
+        ]
+        assert bar_x_categories(traces) == ["A", "B"]
+
+    def test_retorna_vazio_sem_traces_bar(self):
+        from subhue_reports.renderer._plotly import bar_x_categories
+
+        traces = [{"type": "scatter", "x": ["A", "B"], "y": [1, 2]}]
+        assert bar_x_categories(traces) == []

@@ -45,9 +45,9 @@ def get_plotly_js() -> str:
 
 
 def bar_x_categories(traces: list[dict]) -> list:
-    """Retorna lista de categorias X do primeiro trace bar encontrado."""
+    """Retorna categorias X do primeiro trace bar vertical. Ignora bar_h (orientation='h')."""
     for trace in traces:
-        if trace.get("type") == "bar" and trace.get("x"):
+        if trace.get("type") == "bar" and trace.get("orientation") != "h" and trace.get("x"):
             return list(trace["x"])
     return []
 
